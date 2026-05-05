@@ -7,6 +7,6 @@ export type PageId =
   | 'settings'
   | 'feedback'
 
-export type Theme = 'dark' | 'light'
+export type Theme = 'dark' | 'light' | 'system'
 
 export type FeedbackType = 'bug' | 'enhancement'
