@@ -9,9 +9,12 @@ import { SpreadsheetView } from './Spreadsheet/SpreadsheetView'
 import { RoundTripBanner } from './RoundTripBanner'
 import { SaveSnapshotModal } from './SaveSnapshotModal'
 import { useSnapshotStore } from '@/store/snapshotStore'
+import { useUiStore } from '@/store/uiStore'
 import { Button } from '@/components/ui/Button'
-import { BookmarkPlus, Trash2 } from 'lucide-react'
+import { BookmarkPlus, Trash2, Clock, Sparkles } from 'lucide-react'
 import { kvGet, kvSet } from '@/persistence/idb'
+import { generateSampleData } from '@/lib/sampleData'
+import { relativeTime } from '@/lib/relativeTime'
 
 type TabId = 'by-project' | 'by-employee' | 'by-week' | 'spreadsheet'
 
@@ -33,9 +36,25 @@ export default function BillingHoursPage() {
   const snap = useSnapshotStore((s) => s.current)
   const configs = useSnapshotStore((s) => s.projectConfigs)
   const clearCurrent = useSnapshotStore((s) => s.clearCurrent)
+  const recentImports = useSnapshotStore((s) => s.recentImports)
+  const importBatch = useSnapshotStore((s) => s.importBatch)
+  const addRecentImport = useSnapshotStore((s) => s.addRecentImport)
+
+  const triggerSaveSnapshot = useUiStore((s) => s.triggerSaveSnapshot)
+  const setTriggerSaveSnapshot = useUiStore((s) => s.setTriggerSaveSnapshot)
 
   const [activeTab, setActiveTab] = useState<TabId>('by-project')
   const [showSaveModal, setShowSaveModal] = useState(false)
+
+  // Handle ⌘S trigger from keyboard shortcuts
+  useEffect(() => {
+    if (triggerSaveSnapshot && snap?.isDraft) {
+      setShowSaveModal(true)
+      setTriggerSaveSnapshot(false)
+    } else if (triggerSaveSnapshot) {
+      setTriggerSaveSnapshot(false)
+    }
+  }, [triggerSaveSnapshot, snap?.isDraft, setTriggerSaveSnapshot])
 
   // Restore tab from storage on mount
   useEffect(() => {
@@ -83,7 +102,50 @@ export default function BillingHoursPage() {
       <SaveSnapshotModal open={showSaveModal} onClose={() => setShowSaveModal(false)} />
 
       {!snap ? (
-        <ImportFlow />
+        <>
+          <ImportFlow />
+          {recentImports.length > 0 && (
+            <div className="mx-8 mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="w-4 h-4 text-slate-500" />
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Recent imports
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {recentImports.map((entry, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-lw-orange-400" />
+                      <span className="text-sm text-slate-300">
+                        {entry.folderName ?? entry.excelName ?? 'Unknown import'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-600">{relativeTime(entry.ts)}</span>
+                      {entry.folderName === 'Sample Data' && (
+                        <button
+                          className="text-xs text-lw-orange-400 hover:text-lw-orange-300 transition-colors"
+                          onClick={() => {
+                            const data = generateSampleData()
+                            void importBatch(data).then(() =>
+                              addRecentImport({ folderName: 'Sample Data' }),
+                            )
+                          }}
+                        >
+                          Reload
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <RoundTripBanner snap={snap} />
