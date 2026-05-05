@@ -35,6 +35,7 @@ interface SnapshotState {
   appendAudit: (
     action: AuditEvent['action'], detail: string, before?: unknown, after?: unknown,
   ) => void
+  clearUnresolvedAllocation: (alloc: string) => void
 }
 
 function bootstrapProjectsFromExcel(
@@ -262,6 +263,10 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
       snapshots: get().snapshots.filter((s) => !cur || s.id !== cur.id),
       unresolvedAllocations: [],
     })
+  },
+
+  clearUnresolvedAllocation: (alloc) => {
+    set({ unresolvedAllocations: get().unresolvedAllocations.filter((a) => a !== alloc) })
   },
 
   appendAudit: (action, detail, before, after) => {
