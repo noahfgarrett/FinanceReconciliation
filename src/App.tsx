@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { useUiStore } from '@/store/uiStore'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { UpdateModal } from '@/components/UpdateModal'
+import { ProjectMappingModal } from '@/components/ProjectMappingModal'
 import { checkForUpdate, type UpdateInfo } from '@/utils/updateChecker'
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
         }}
         info={updateInfo}
       />
+      <ProjectMappingModal />
     </>
   )
 }
