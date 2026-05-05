@@ -6,9 +6,11 @@ import { ByProjectView } from './ByProjectView'
 import { ByEmployeeView } from './ByEmployeeView'
 import { ByWeekView } from './ByWeekView'
 import { SpreadsheetView } from './Spreadsheet/SpreadsheetView'
+import { RoundTripBanner } from './RoundTripBanner'
+import { SaveSnapshotModal } from './SaveSnapshotModal'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { Button } from '@/components/ui/Button'
-import { Trash2 } from 'lucide-react'
+import { BookmarkPlus, Trash2 } from 'lucide-react'
 import { kvGet, kvSet } from '@/persistence/idb'
 
 type TabId = 'by-project' | 'by-employee' | 'by-week' | 'spreadsheet'
@@ -33,6 +35,7 @@ export default function BillingHoursPage() {
   const clearCurrent = useSnapshotStore((s) => s.clearCurrent)
 
   const [activeTab, setActiveTab] = useState<TabId>('by-project')
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   // Restore tab from storage on mount
   useEffect(() => {
@@ -59,16 +62,31 @@ export default function BillingHoursPage() {
         }
         actions={
           snap ? (
-            <Button variant="ghost" size="sm" icon={<Trash2 className="w-4 h-4" />} onClick={() => void clearCurrent()}>
-              Clear
-            </Button>
+            <div className="flex gap-2">
+              {snap.isDraft && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<BookmarkPlus className="w-4 h-4" />}
+                  onClick={() => setShowSaveModal(true)}
+                >
+                  Save Snapshot
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" icon={<Trash2 className="w-4 h-4" />} onClick={() => void clearCurrent()}>
+                Clear
+              </Button>
+            </div>
           ) : undefined
         }
       />
+      <SaveSnapshotModal open={showSaveModal} onClose={() => setShowSaveModal(false)} />
+
       {!snap ? (
         <ImportFlow />
       ) : (
         <>
+          <RoundTripBanner snap={snap} />
           <KpiStrip snap={snap} configs={configs} />
 
           {/* Tab strip */}
