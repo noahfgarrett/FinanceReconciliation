@@ -10,6 +10,7 @@ const PAGES: Record<PageId, LazyExoticComponent<ComponentType>> = {
   exports: lazy(() => import('@/pages/Exports/ExportsPage')),
   history: lazy(() => import('@/pages/History/HistoryPage')),
   settings: lazy(() => import('@/pages/Settings/SettingsPage')),
+  feedback: lazy(() => import('@/pages/Feedback/FeedbackPage')),
 }
 
 function PageFallback() {
