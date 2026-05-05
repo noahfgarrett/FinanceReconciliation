@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.3.0',
+    date: '2026-05-05T17:00:00Z',
+    type: 'feature',
+    notes: `### Spreadsheet view
+- Full TanStack Table workhorse with virtualized rows for the (employee × project × week) detail
+- Per-column filters, multi-column sort, global fuzzy search, group-by Project/Employee/Week
+- Density toggle, sticky header, sticky Employee column
+- Flag chips with hover-explain, row-tint by severity
+- Inline editable Notes; Mark Reviewed action with audit log
+- Export current view to CSV (respects filters and sort)`,
+  },
+  {
     version: '0.2.0',
     date: '2026-05-05T16:30:00Z',
     type: 'feature',
