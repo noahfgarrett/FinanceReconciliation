@@ -8,6 +8,14 @@ import { getAll, putRecord, deleteRecord, kvGet, kvSet } from '@/persistence/idb
 import { slugifyProjectName } from '@/reconciler/projectMatching'
 
 const CURRENT_SNAPSHOT_ID = 'current-snapshot-id'
+const RECENT_IMPORTS_KEY = 'recent-imports'
+const MAX_RECENT_IMPORTS = 5
+
+export interface RecentImportEntry {
+  excelName?: string
+  folderName?: string
+  ts: string
+}
 
 interface SnapshotState {
   current: Snapshot | null
@@ -15,8 +23,10 @@ interface SnapshotState {
   clients: Record<string, Client>
   snapshots: Snapshot[]
   unresolvedAllocations: string[]
+  recentImports: RecentImportEntry[]
 
   hydrate: () => Promise<void>
+  addRecentImport: (entry: { excelName?: string; folderName?: string }) => Promise<void>
   importBatch: (input: {
     excelRows: ExcelRow[]
     employees: Employee[]
@@ -75,20 +85,30 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
   clients: {},
   snapshots: [],
   unresolvedAllocations: [],
+  recentImports: [],
 
   hydrate: async () => {
-    const [configs, clients, snapshots, currentId] = await Promise.all([
+    const [configs, clients, snapshots, currentId, recentImports] = await Promise.all([
       getAll<ProjectConfig>('configs'),
       getAll<Client>('clients'),
       getAll<Snapshot>('snapshots'),
       kvGet<string>(CURRENT_SNAPSHOT_ID),
+      kvGet<RecentImportEntry[]>(RECENT_IMPORTS_KEY),
     ])
     const cfgMap: Record<string, ProjectConfig> = {}
     configs.forEach((c) => (cfgMap[c.projectKey] = c))
     const clientMap: Record<string, Client> = {}
     clients.forEach((c) => (clientMap[c.id] = c))
     const current = snapshots.find((s) => s.id === currentId) ?? null
-    set({ projectConfigs: cfgMap, clients: clientMap, snapshots, current })
+    set({ projectConfigs: cfgMap, clients: clientMap, snapshots, current, recentImports: recentImports ?? [] })
+  },
+
+  addRecentImport: async (entry) => {
+    const newEntry: RecentImportEntry = { ...entry, ts: new Date().toISOString() }
+    const existing = get().recentImports
+    const updated = [newEntry, ...existing].slice(0, MAX_RECENT_IMPORTS)
+    await kvSet(RECENT_IMPORTS_KEY, updated)
+    set({ recentImports: updated })
   },
 
   importBatch: async ({ excelRows, employees, parsedPdfs, periodLabel }) => {
