@@ -65,20 +65,23 @@ interface NoteCellProps {
   value: string
   row: WeeklyBilling
   onNoteChange: (row: WeeklyBilling, value: string) => void
+  locked: boolean
 }
 
-function NoteCell({ value, row, onNoteChange }: NoteCellProps) {
+function NoteCell({ value, row, onNoteChange, locked }: NoteCellProps) {
   const [localVal, setLocalVal] = useState(value)
   const handleBlur = () => {
-    if (localVal !== value) onNoteChange(row, localVal)
+    if (!locked && localVal !== value) onNoteChange(row, localVal)
   }
   return (
     <input
-      className="w-full bg-transparent text-slate-300 text-sm outline-none focus:bg-slate-800/60 px-1 rounded"
-      value={localVal}
-      onChange={(e) => setLocalVal(e.target.value)}
+      className="w-full bg-transparent text-slate-300 text-sm outline-none focus:bg-slate-800/60 px-1 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+      value={locked ? value : localVal}
+      onChange={(e) => { if (!locked) setLocalVal(e.target.value) }}
       onBlur={handleBlur}
       placeholder="—"
+      disabled={locked}
+      title={locked ? 'Snapshot is locked' : undefined}
     />
   )
 }
@@ -87,15 +90,18 @@ interface ReviewedCellProps {
   value: boolean
   row: WeeklyBilling
   onReviewedChange: (row: WeeklyBilling, value: boolean) => void
+  locked: boolean
 }
 
-function ReviewedCell({ value, row, onReviewedChange }: ReviewedCellProps) {
+function ReviewedCell({ value, row, onReviewedChange, locked }: ReviewedCellProps) {
   return (
     <input
       type="checkbox"
       checked={value}
-      onChange={(e) => onReviewedChange(row, e.target.checked)}
-      className="accent-lw-orange-500 cursor-pointer"
+      onChange={(e) => { if (!locked) onReviewedChange(row, e.target.checked) }}
+      className="accent-lw-orange-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      disabled={locked}
+      title={locked ? 'Snapshot is locked' : undefined}
     />
   )
 }
@@ -148,9 +154,11 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
     dtHrs: hasDt,
   })
 
+  const isLocked = current?.locked ?? false
+
   const handleNoteChange = useCallback(
     (row: WeeklyBilling, value: string) => {
-      if (!current) return
+      if (!current || current.locked) return
       const updated = current.weeklyBilling.map((r) =>
         r.employeeCode === row.employeeCode &&
         r.projectKey === row.projectKey &&
@@ -169,7 +177,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
 
   const handleReviewedChange = useCallback(
     (row: WeeklyBilling, value: boolean) => {
-      if (!current) return
+      if (!current || current.locked) return
       const updated = current.weeklyBilling.map((r) =>
         r.employeeCode === row.employeeCode &&
         r.projectKey === row.projectKey &&
@@ -193,8 +201,9 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
         onNoteChange: handleNoteChange,
         onReviewedChange: handleReviewedChange,
         hasDt,
+        locked: isLocked,
       }),
-    [configs, employees, handleNoteChange, handleReviewedChange, hasDt],
+    [configs, employees, handleNoteChange, handleReviewedChange, hasDt, isLocked],
   )
 
   // Apply quick filters on top of the row data
@@ -278,7 +287,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
     .filter((r): r is WeeklyBilling => r != null)
 
   const handleBulkMarkReviewed = () => {
-    if (!current) return
+    if (!current || current.locked) return
     const keySet = new Set(
       selectedRows.map((r) => `${r.employeeCode}|${r.projectKey}|${r.weekStart}`),
     )
@@ -465,6 +474,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                         value: string
                         row: WeeklyBilling
                         onNoteChange: (row: WeeklyBilling, value: string) => void
+                        locked: boolean
                       }
                       return (
                         <td
@@ -477,6 +487,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                             value={noteData.value}
                             row={noteData.row}
                             onNoteChange={noteData.onNoteChange}
+                            locked={noteData.locked}
                           />
                         </td>
                       )
@@ -491,6 +502,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                         value: boolean
                         row: WeeklyBilling
                         onReviewedChange: (row: WeeklyBilling, value: boolean) => void
+                        locked: boolean
                       }
                       return (
                         <td
@@ -503,6 +515,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                             value={reviewData.value}
                             row={reviewData.row}
                             onReviewedChange={reviewData.onReviewedChange}
+                            locked={reviewData.locked}
                           />
                         </td>
                       )

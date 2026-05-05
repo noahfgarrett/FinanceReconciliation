@@ -185,10 +185,17 @@ export function ProjectConfigDrawer({ config, onClose }: Props): React.JSX.Eleme
   const autoOt = !isNaN(regRate) ? `auto = $${(regRate * 1.5).toFixed(2)}/hr` : undefined
   const autoDt = !isNaN(regRate) ? `auto = $${(regRate * 2).toFixed(2)}/hr` : undefined
 
+  const isLocked = currentSnap?.locked ?? false
+
   const footer = (
-    <div className="flex gap-2 justify-end">
+    <div className="flex items-center gap-2 justify-end">
+      {isLocked && (
+        <p className="text-xs text-amber-400 mr-auto">
+          Snapshot is locked — unlock from History to edit.
+        </p>
+      )}
       <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-      <Button variant="primary" size="sm" disabled={saving} onClick={() => void handleSave()}>
+      <Button variant="primary" size="sm" disabled={saving || isLocked} onClick={() => void handleSave()}>
         {saving ? 'Saving…' : 'Save changes'}
       </Button>
     </div>
