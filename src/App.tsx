@@ -1,11 +1,14 @@
 import { useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useUiStore } from '@/store/uiStore'
+import { useSnapshotStore } from '@/store/snapshotStore'
 
 export default function App() {
-  const hydrate = useUiStore((s) => s.hydrate)
+  const hydrateUi = useUiStore((s) => s.hydrate)
+  const hydrateSnap = useSnapshotStore((s) => s.hydrate)
   useEffect(() => {
-    void hydrate()
-  }, [hydrate])
+    void hydrateUi()
+    void hydrateSnap()
+  }, [hydrateUi, hydrateSnap])
   return <AppShell />
 }
