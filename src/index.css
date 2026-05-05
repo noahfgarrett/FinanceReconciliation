@@ -6,3 +6,33 @@ html, body, #root { height: 100%; }
 body { @apply bg-slate-950 text-slate-100 font-sans antialiased; }
 .dark body { @apply bg-slate-950 text-slate-100; }
 .light body { @apply bg-slate-50 text-slate-900; }
+
+/* ── Light-mode surface overrides ─────────────────────────────────────────── */
+/* Phase 16 will replace these with a proper token-based theme system.        */
+/* For now, map dark surface classes to light equivalents when .light is set. */
+
+.light .bg-slate-950 { background-color: rgb(248 250 252); } /* slate-50  */
+.light .bg-slate-900 { background-color: rgb(241 245 249); } /* slate-100 */
+.light .bg-slate-800 { background-color: rgb(226 232 240); } /* slate-200 */
+/* bg-[#0a0f1c] (custom dark bg used in Modal + AppShell) */
+.light [class*="bg-\[#0a0f1c\]"] { background-color: #ffffff; }
+
+.light .border-slate-800 { border-color: rgb(226 232 240); } /* slate-200 */
+.light .border-slate-700 { border-color: rgb(203 213 225); } /* slate-300 */
+
+.light .text-slate-100 { color: rgb(15 23 42);  }  /* slate-900 */
+.light .text-slate-200 { color: rgb(30 41 59);  }  /* slate-800 */
+.light .text-slate-300 { color: rgb(51 65 85);  }  /* slate-700 */
+.light .text-slate-400 { color: rgb(71 85 105); }  /* slate-600 */
+.light .text-slate-500 { color: rgb(100 116 139); } /* slate-500 */
+.light .text-slate-600 { color: rgb(100 116 139); } /* slate-500 */
+
+/* Inputs / selects in light mode */
+.light select,
+.light input[type="text"],
+.light input[type="search"],
+.light textarea {
+  background-color: #ffffff;
+  color: rgb(15 23 42);
+  border-color: rgb(203 213 225);
+}
