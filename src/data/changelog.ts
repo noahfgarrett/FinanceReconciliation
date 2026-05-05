@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.4.0',
+    date: '2026-05-05T18:00:00Z',
+    type: 'feature',
+    notes: `### More views and Reconcile preview
+- **By Employee** tab: one row per employee, expandable to show per-project per-week breakdown
+- **By Week** tab: one row per ISO Monday with totals
+- **Reconcile** page: richer stub with preview mockup and a direct link to submit invoice samples`,
+  },
+  {
     version: '0.3.0',
     date: '2026-05-05T17:00:00Z',
     type: 'feature',
