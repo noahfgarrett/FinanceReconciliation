@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.8.0',
+    date: '2026-05-05T22:00:00Z',
+    type: 'feature',
+    notes: `### Settings & UX polish
+- **Settings** page: Appearance (Dark / Light / System theme), Number format, Keyboard shortcuts list, About, and Danger Zone (clear local data)
+- **Light mode** styles
+- **Keyboard shortcuts**: ⌘S save · ⌘E exports · ⌘K command palette · ? help · / focus search · F flagged-only
+- **Command palette**: type to filter all global commands
+- **Recent imports** surface on the Billing Hours empty state
+- Sidebar version pill opens the Changelog`,
+  },
+  {
     version: '0.7.0',
     date: '2026-05-05T21:00:00Z',
     type: 'feature',

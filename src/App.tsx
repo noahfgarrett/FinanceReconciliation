@@ -4,13 +4,21 @@ import { useUiStore } from '@/store/uiStore'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { UpdateModal } from '@/components/UpdateModal'
 import { ProjectMappingModal } from '@/components/ProjectMappingModal'
+import { CommandPalette } from '@/components/CommandPalette'
+import { KeyboardHelpModal } from '@/components/KeyboardHelpModal'
+import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { checkForUpdate, type UpdateInfo } from '@/utils/updateChecker'
 
 export default function App() {
   const hydrateUi = useUiStore((s) => s.hydrate)
   const hydrateSnap = useSnapshotStore((s) => s.hydrate)
+  const showChangelog = useUiStore((s) => s.showChangelog)
+  const setShowChangelog = useUiStore((s) => s.setShowChangelog)
+
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [showUpdateModal, setShowUpdateModal] = useState(false)
+
+  useKeyboardShortcuts()
 
   useEffect(() => {
     void hydrateUi()
@@ -36,20 +44,26 @@ export default function App() {
     })
   }, [hydrateUi, hydrateSnap])
 
+  function handleUpdateModalClose(): void {
+    setShowUpdateModal(false)
+    setShowChangelog(false)
+    if (updateInfo) {
+      localStorage.setItem('lw-recon-lastSeenVersion', updateInfo.version)
+    }
+  }
+
   return (
     <>
       <AppShell />
       <UpdateModal
-        open={showUpdateModal}
-        onClose={() => {
-          setShowUpdateModal(false)
-          if (updateInfo) {
-            localStorage.setItem('lw-recon-lastSeenVersion', updateInfo.version)
-          }
-        }}
-        info={updateInfo}
+        open={showUpdateModal || showChangelog}
+        onClose={handleUpdateModalClose}
+        info={showUpdateModal ? updateInfo : null}
+        defaultTab={showChangelog && !showUpdateModal ? 'changelog' : undefined}
       />
       <ProjectMappingModal />
+      <CommandPalette />
+      <KeyboardHelpModal />
     </>
   )
 }
