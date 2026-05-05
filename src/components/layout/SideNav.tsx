@@ -22,6 +22,7 @@ const GROUPS: Array<NavItem['group']> = ['Workspace', 'Configuration', 'Output',
 export function SideNav() {
   const activePage = useUiStore((s) => s.activePage)
   const setActivePage = useUiStore((s) => s.setActivePage)
+  const setShowChangelog = useUiStore((s) => s.setShowChangelog)
 
   return (
     <aside className="w-60 shrink-0 bg-[#0a0f1c] border-r border-slate-800 flex flex-col">
@@ -98,10 +99,14 @@ export function SideNav() {
           <Settings className="w-4 h-4" />
           Settings
         </button>
-        <div className="flex items-center gap-2 px-3 py-2 mt-2 text-xs text-slate-500">
+        <button
+          onClick={() => setShowChangelog(true)}
+          className="flex items-center gap-2 px-3 py-2 mt-2 text-xs text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-900 w-full"
+          title="View changelog"
+        >
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
           v{__APP_VERSION__} · up to date
-        </div>
+        </button>
       </div>
     </aside>
   )
