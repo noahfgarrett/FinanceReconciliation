@@ -1,4 +1,4 @@
-import { BarChart3, GitCompareArrows, Boxes, Download, History, Settings } from 'lucide-react'
+import { BarChart3, GitCompareArrows, Boxes, Download, History, Settings, Bug, Lightbulb } from 'lucide-react'
 import { useUiStore } from '@/store/uiStore'
 import type { PageId } from '@/types'
 
@@ -72,7 +72,25 @@ export function SideNav() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-800">
+      <div className="p-3 border-t border-slate-800 space-y-0.5">
+        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+          <button
+            onClick={() => useUiStore.getState().openFeedback('bug')}
+            title="Report a bug"
+            className="flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-lg bg-slate-900/40 border border-slate-800 text-slate-400 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-colors"
+          >
+            <Bug className="w-3.5 h-3.5" />
+            Report Bug
+          </button>
+          <button
+            onClick={() => useUiStore.getState().openFeedback('enhancement')}
+            title="Share an idea"
+            className="flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-lg bg-slate-900/40 border border-slate-800 text-slate-400 hover:text-blue-400 hover:border-blue-500/30 hover:bg-blue-500/5 transition-colors"
+          >
+            <Lightbulb className="w-3.5 h-3.5" />
+            Have an Idea
+          </button>
+        </div>
         <button
           onClick={() => useUiStore.getState().setActivePage('settings')}
           className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg"
