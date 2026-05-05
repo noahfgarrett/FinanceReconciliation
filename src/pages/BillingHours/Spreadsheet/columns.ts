@@ -21,6 +21,8 @@ export interface MakeColumnsOptions {
   onReviewedChange: (row: WeeklyBilling, value: boolean) => void
   /** Whether any row has DT hours (controls dtHrs visibility) */
   hasDt: boolean
+  /** When true, note and reviewed cells are read-only */
+  locked: boolean
 }
 
 export function severityTone(flags: RowFlag[]): 'error' | 'warn' | 'info' | null {
@@ -37,7 +39,7 @@ function fmtWeek(iso: string): string {
 }
 
 export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[] {
-  const { configs, employees, onNoteChange, onReviewedChange, hasDt } = opts
+  const { configs, employees, onNoteChange, onReviewedChange, hasDt, locked } = opts
 
   const empMap = new Map<string, Employee>()
   for (const e of employees) empMap.set(e.code, e)
@@ -179,6 +181,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
         value: info.row.original.notes ?? '',
         row: info.row.original,
         onNoteChange,
+        locked,
       }),
       enableSorting: false,
       size: 200,
@@ -194,6 +197,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
         value: info.row.original.reviewed,
         row: info.row.original,
         onReviewedChange,
+        locked,
       }),
       size: 90,
       meta: { align: 'right' },
