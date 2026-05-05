@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ImportFlow } from '@/components/ImportFlow'
 import { KpiStrip } from './KpiStrip'
 import { ByProjectView } from './ByProjectView'
+import { ByEmployeeView } from './ByEmployeeView'
 import { SpreadsheetView } from './Spreadsheet/SpreadsheetView'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { Button } from '@/components/ui/Button'
@@ -80,7 +81,7 @@ export default function BillingHoursPage() {
           <div className="mx-8 mt-4 mb-0 flex items-center gap-1 border-b border-slate-800">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id
-              const isDisabled = tab.id === 'by-employee' || tab.id === 'by-week'
+              const isDisabled = tab.id === 'by-week'
               return (
                 <button
                   key={tab.id}
@@ -111,7 +112,9 @@ export default function BillingHoursPage() {
             {activeTab === 'by-project' && (
               <ByProjectView snap={snap} configs={configs} />
             )}
-            {activeTab === 'by-employee' && comingSoon}
+            {activeTab === 'by-employee' && (
+              <ByEmployeeView snap={snap} configs={configs} />
+            )}
             {activeTab === 'by-week' && comingSoon}
             {activeTab === 'spreadsheet' && (
               <div className="mx-8 mb-8">
