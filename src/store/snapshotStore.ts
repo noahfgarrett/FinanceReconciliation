@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { reconcile } from '@/reconciler/reconcile'
 import type {
-  Client, Employee, ExcelRow, ParsedPdf, ProjectConfig, Snapshot, AuditEvent,
+  Client, Employee, ExcelRow, ExportBundle, ParsedPdf, ProjectConfig, Snapshot, AuditEvent,
 } from '@/persistence/schemas'
 import { getAll, putRecord, deleteRecord, kvGet, kvSet } from '@/persistence/idb'
 import { slugifyProjectName } from '@/reconciler/projectMatching'
@@ -36,6 +36,7 @@ interface SnapshotState {
     action: AuditEvent['action'], detail: string, before?: unknown, after?: unknown,
   ) => void
   clearUnresolvedAllocation: (alloc: string) => void
+  importBundle: (bundle: ExportBundle) => Promise<void>
 }
 
 function bootstrapProjectsFromExcel(
@@ -267,6 +268,28 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
 
   clearUnresolvedAllocation: (alloc) => {
     set({ unresolvedAllocations: get().unresolvedAllocations.filter((a) => a !== alloc) })
+  },
+
+  importBundle: async (bundle) => {
+    if (bundle.clients) {
+      for (const c of Object.values(bundle.clients)) {
+        await putRecord('clients', c.id, c)
+      }
+    }
+    if (bundle.projectConfigs) {
+      for (const cfg of Object.values(bundle.projectConfigs)) {
+        await putRecord('configs', cfg.projectKey, cfg)
+      }
+    }
+    if (bundle.snapshots) {
+      const existingIds = new Set(get().snapshots.map((s) => s.id))
+      for (const snap of bundle.snapshots) {
+        if (!existingIds.has(snap.id)) {
+          await putRecord('snapshots', snap.id, snap)
+        }
+      }
+    }
+    await get().hydrate()
   },
 
   appendAudit: (action, detail, before, after) => {
