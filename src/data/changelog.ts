@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.5.0',
+    date: '2026-05-05T19:00:00Z',
+    type: 'feature',
+    notes: `### Project & Client management
+- **Projects page**: edit OT thresholds, charge rates, allocation aliases, per-employee rate overrides
+- **Clients page**: manage client metadata, payment terms, invoice prefixes, remit-to addresses
+- **Project Mapping Modal**: auto-prompts to resolve unmapped allocation codes after import
+- Editing any setting triggers recompute and updates KPIs / by-project / spreadsheet immediately`,
+  },
+  {
     version: '0.4.0',
     date: '2026-05-05T18:00:00Z',
     type: 'feature',
