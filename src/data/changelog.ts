@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.7.0',
+    date: '2026-05-05T21:00:00Z',
+    type: 'feature',
+    notes: `### Exports
+- **Invoice PDFs** per client with the LotusWorks logo, line items per project, OT/DT breakdowns, payment terms, remit-to, and footer notes
+- **HTML preview** of the invoice before generating the PDF
+- **Excel workbook** with a Summary tab plus one tab per project
+- **JSON sync**: export All / Settings / History; import to merge clients, projects, and snapshots between machines`,
+  },
+  {
     version: '0.6.0',
     date: '2026-05-05T20:00:00Z',
     type: 'feature',
