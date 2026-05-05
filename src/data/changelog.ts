@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.6.0',
+    date: '2026-05-05T20:00:00Z',
+    type: 'feature',
+    notes: `### Snapshot history & locking
+- **History page**: every saved month is a row with Open / Duplicate / Rename / Lock / Delete actions
+- **Save Snapshot** button on Billing Hours converts a draft to a saved snapshot
+- **Audit log** under each snapshot tracks edits, lock/unlock events, generated invoices
+- **Lock**: a locked snapshot prevents accidental edits; unlock from the History page to make changes
+- **Round-trip totals banner**: warns when by-project / by-employee / row sums disagree`,
+  },
+  {
     version: '0.5.0',
     date: '2026-05-05T19:00:00Z',
     type: 'feature',
