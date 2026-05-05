@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import 'fake-indexeddb/auto'
 import { useUiStore } from './uiStore'
 
 beforeEach(() => {
