@@ -92,6 +92,48 @@ describe('reconcile', () => {
     expect(out.warnings.some((w) => w.code === 'excel-pdf-hours-mismatch')).toBe(true)
   })
 
+  it('propagates min confidence + deduped reasons + sources to weekly billing', () => {
+    const lowConfPdf: ParsedPdf = {
+      employeeCode: '2000',
+      employeeName: 'X Y',
+      payPeriodStart: '2026-04-06',
+      payPeriodEnd: '2026-04-06',
+      entries: [
+        {
+          date: '2026-04-06', payCode: 'REG', allocation: 'ACM',
+          hoursTotal: 8, weekStart: '2026-04-06',
+          confidence: 0.9,
+          confidenceReasons: ['ambiguous 2-digit year'],
+          source: { pageIndex: 1, x: 50, y: 700, width: 100, height: 12 },
+        },
+        {
+          date: '2026-04-07', payCode: 'REG', allocation: 'ACM',
+          hoursTotal: 18, weekStart: '2026-04-06',
+          confidence: 0.7,
+          confidenceReasons: ['hours outside typical 0.5–16 range', 'ambiguous 2-digit year'],
+          source: { pageIndex: 1, x: 50, y: 685, width: 100, height: 12 },
+        },
+      ],
+      weeklyTotals: { '2026-04-06': 26 },
+      rawText: '',
+      pageCount: 1,
+    }
+    const out = reconcile({
+      employees: [emp('2000')],
+      excelRows: [excel('2000', 'Project Acme', 26)],
+      parsedPdfs: [lowConfPdf],
+      projectConfigs: { 'project-acme': cfg() },
+    })
+    expect(out.weeklyBilling).toHaveLength(1)
+    const r = out.weeklyBilling[0]
+    expect(r.confidence).toBe(0.7)
+    // deduped reasons
+    expect(r.confidenceReasons).toContain('ambiguous 2-digit year')
+    expect(r.confidenceReasons).toContain('hours outside typical 0.5–16 range')
+    expect(r.confidenceReasons).toHaveLength(2)
+    expect(r.sources).toHaveLength(2)
+  })
+
   it('flags missing PDF', () => {
     const out = reconcile({
       employees: [emp('2000'), emp('3000')],
