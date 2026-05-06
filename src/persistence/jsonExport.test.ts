@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildExportBundle, readJsonFile } from './jsonExport'
+import type { ParsedPdfWithBytes, Snapshot } from './schemas'
 
 describe('buildExportBundle', () => {
   const base = {
@@ -35,6 +36,48 @@ describe('buildExportBundle', () => {
     const b = buildExportBundle({ ...base, scope: 'history' })
     expect(b.clients).toBeUndefined()
     expect(b.snapshots).toBeDefined()
+  })
+
+  it('strips pdfBytes from exported snapshots', () => {
+    const pdf: ParsedPdfWithBytes = {
+      employeeCode: '2000',
+      employeeName: 'X Y',
+      payPeriodStart: '2026-04-06',
+      payPeriodEnd: '2026-04-19',
+      entries: [],
+      weeklyTotals: {},
+      rawText: '',
+      pageCount: 1,
+      pdfBytes: new ArrayBuffer(2048),
+    }
+    const snap: Snapshot = {
+      id: 'snap-1',
+      name: 'Test',
+      periodLabel: 'April 2026',
+      createdAt: '2026-04-30T00:00:00Z',
+      lastModifiedAt: '2026-04-30T00:00:00Z',
+      locked: false,
+      isDraft: false,
+      employees: [],
+      excelRows: [],
+      parsedPdfs: [pdf],
+      projectConfigsAtSave: {},
+      clientsAtSave: {},
+      weeklyBilling: [],
+      warnings: [],
+      auditLog: [],
+    }
+    const bundle = buildExportBundle({
+      ...base,
+      scope: 'all',
+      snapshots: [snap],
+    })
+    const exported = bundle.snapshots![0]
+    const exportedPdf = exported.parsedPdfs[0] as ParsedPdfWithBytes
+    expect(exportedPdf.pdfBytes).toBeUndefined()
+    // Other fields preserved
+    expect(exportedPdf.employeeCode).toBe('2000')
+    expect(exportedPdf.pageCount).toBe(1)
   })
 })
 

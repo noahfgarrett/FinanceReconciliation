@@ -1,6 +1,8 @@
 import {
   ExportBundleSchema,
   type ExportBundle,
+  type ParsedPdf,
+  type ParsedPdfWithBytes,
   type ProjectConfig,
   type Client,
   type Snapshot,
@@ -13,6 +15,20 @@ export interface ExportOptions {
   snapshots: Snapshot[]
 }
 
+/**
+ * Strip runtime-only `pdfBytes` from a snapshot's ParsedPdfs so JSON exports
+ * stay small. The Zod schema doesn't validate bytes, but they would be
+ * serialized as `{}` (or worse) and balloon the file size, so remove them.
+ */
+function stripPdfBytes(snap: Snapshot): Snapshot {
+  const cleaned = (snap.parsedPdfs as ParsedPdfWithBytes[]).map((p): ParsedPdf => {
+    const { pdfBytes: _omitted, ...rest } = p
+    void _omitted
+    return rest
+  })
+  return { ...snap, parsedPdfs: cleaned }
+}
+
 export function buildExportBundle(opts: ExportOptions): ExportBundle {
   const includeSettings = opts.scope === 'all' || opts.scope === 'settings'
   const includeHistory = opts.scope === 'all' || opts.scope === 'history'
@@ -23,7 +39,7 @@ export function buildExportBundle(opts: ExportOptions): ExportBundle {
     scope: opts.scope,
     clients: includeSettings ? opts.clients : undefined,
     projectConfigs: includeSettings ? opts.projectConfigs : undefined,
-    snapshots: includeHistory ? opts.snapshots : undefined,
+    snapshots: includeHistory ? opts.snapshots.map(stripPdfBytes) : undefined,
   }
 }
 

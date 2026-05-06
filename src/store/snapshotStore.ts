@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { reconcile } from '@/reconciler/reconcile'
 import type {
-  Client, Employee, ExcelRow, ExportBundle, ParsedPdf, ProjectConfig, Snapshot, AuditEvent,
+  Client, Employee, ExcelRow, ExportBundle, ParsedPdfWithBytes,
+  ProjectConfig, Snapshot, AuditEvent,
 } from '@/persistence/schemas'
 import { getAll, putRecord, deleteRecord, kvGet, kvSet } from '@/persistence/idb'
 import { slugifyProjectName } from '@/reconciler/projectMatching'
@@ -30,7 +31,7 @@ interface SnapshotState {
   importBatch: (input: {
     excelRows: ExcelRow[]
     employees: Employee[]
-    parsedPdfs: ParsedPdf[]
+    parsedPdfs: ParsedPdfWithBytes[]
     periodLabel: string
   }) => Promise<void>
   upsertProjectConfig: (cfg: ProjectConfig) => Promise<void>
@@ -328,3 +329,20 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
     })
   },
 }))
+
+/**
+ * Look up the original PDF bytes for an employee in a given snapshot, if any
+ * are stored. Returns null when the snapshot has no PDF for the employee or
+ * the bytes are unavailable (e.g., snapshot was loaded from a JSON export).
+ */
+export function getSourcePdfBytes(
+  snapshotId: string,
+  employeeCode: string,
+): ArrayBuffer | null {
+  const snap = useSnapshotStore.getState().snapshots.find((s) => s.id === snapshotId)
+  if (!snap) return null
+  const pdf = (snap.parsedPdfs as ParsedPdfWithBytes[]).find(
+    (p) => p.employeeCode === employeeCode,
+  )
+  return pdf?.pdfBytes ?? null
+}
