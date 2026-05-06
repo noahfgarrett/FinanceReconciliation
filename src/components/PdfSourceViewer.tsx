@@ -1,10 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, FileX, Loader2 } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import { pdfjs } from '@/parsers/pdfjsConfig'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import type { SourceLocation } from '@/persistence/schemas'
+
+/**
+ * Lazy-load pdfjs only when the viewer is actually opened so pdfjs-dist
+ * (~2 MB) doesn't bloat the main bundle. The viewer is rarely used vs. the
+ * import path which goes through a dedicated worker.
+ */
+type PdfjsModule = typeof import('@/parsers/pdfjsConfig')
+let pdfjsPromise: Promise<PdfjsModule> | null = null
+function loadPdfjs(): Promise<PdfjsModule> {
+  if (!pdfjsPromise) pdfjsPromise = import('@/parsers/pdfjsConfig')
+  return pdfjsPromise
+}
 
 type Zoom = 'fit' | 1 | 1.5
 
@@ -63,22 +74,28 @@ export function PdfSourceViewer({
       return
     }
     let cancelled = false
+    let taskRef: { destroy: () => void } | null = null
     setLoading(true)
     setError(null)
 
     // pdfjs.getDocument({data}) consumes the buffer — clone first
     // so the original stays usable for subsequent opens.
     const cloned = pdfBytes.slice(0)
-    const task = pdfjs.getDocument({ data: cloned })
-    task.promise
-      .then((d) => {
-        if (cancelled) {
-          d.destroy()
-          return
-        }
-        setDoc(d)
-        const initial = initialPage ?? highlights[0]?.pageIndex ?? 1
-        setPageIndex(Math.min(Math.max(1, initial), d.numPages))
+
+    loadPdfjs()
+      .then(({ pdfjs }) => {
+        if (cancelled) return
+        const task = pdfjs.getDocument({ data: cloned })
+        taskRef = task
+        return task.promise.then((d) => {
+          if (cancelled) {
+            d.destroy()
+            return
+          }
+          setDoc(d)
+          const initial = initialPage ?? highlights[0]?.pageIndex ?? 1
+          setPageIndex(Math.min(Math.max(1, initial), d.numPages))
+        })
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -90,7 +107,7 @@ export function PdfSourceViewer({
 
     return () => {
       cancelled = true
-      task.destroy()
+      taskRef?.destroy()
     }
     // We deliberately exclude `highlights` and `initialPage` so reloading the
     // viewer for a different row doesn't refetch the same PDF document.
