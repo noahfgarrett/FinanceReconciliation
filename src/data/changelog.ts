@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.2',
+    date: '2026-05-06T15:00:00Z',
+    type: 'fix',
+    notes: `### Hover-lift no longer flashes
+- Fixed the harsh white flash behind KPI tiles (and other ring + lift cards) when hovering in dark mode. The lift effect now uses a CSS filter drop-shadow that composes with the tile's ring instead of fighting it.
+- Softened the dark-mode shadow palette overall now that surfaces sit on lifted charcoal — opacity reduced from 55–70% to 32–50%.`,
+  },
+  {
     version: '1.0.1',
     date: '2026-05-06T14:00:00Z',
     type: 'fix',
