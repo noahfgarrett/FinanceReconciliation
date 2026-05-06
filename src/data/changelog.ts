@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.1',
+    date: '2026-05-06T14:00:00Z',
+    type: 'fix',
+    notes: `### Dark mode lift
+- Surfaces are noticeably lighter — closer to Claude desktop's warm charcoal range. Easier on the eyes during long review sessions.
+- Fixed a CSS bridge bug where component backgrounds using the legacy hex literal weren't picking up the theme tokens (so previous attempts to lift the dark mode silently no-op'd on most cards/sidenav/modals). All surfaces now flow through the variable layer.`,
+  },
+  {
     version: '1.0.0',
     date: '2026-05-06T00:00:00Z',
     type: 'major',

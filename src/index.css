@@ -38,13 +38,13 @@
   --brand-blue-950: #031D38;
   --brand-blue:     #0057A4;
 
-  /* ── Surfaces (dark) — soft charcoal with subtle blue undertone, ~Claude desktop lightness ── */
-  --surface-base:               #14171F;        /* page background */
-  --surface-elevated:           #1B1F28;        /* cards, sidenav */
-  --surface-overlay:            #232832;        /* modals, drawers above cards */
-  --surface-interactive:        #2A2F3B;        /* buttons resting */
-  --surface-interactive-hover:  #343A48;        /* buttons hover */
-  --surface-subtle:             rgba(255,255,255,0.025); /* subtle row hover */
+  /* ── Surfaces (dark) — warm charcoal at Claude-desktop lightness ── */
+  --surface-base:               #1B1E25;        /* page background — rgb(27,30,37) */
+  --surface-elevated:           #23272F;        /* cards, sidenav    — rgb(35,39,47) */
+  --surface-overlay:            #2C313B;        /* modals, drawers   — rgb(44,49,59) */
+  --surface-interactive:        #363B47;        /* buttons resting   — rgb(54,59,71) */
+  --surface-interactive-hover:  #424755;        /* buttons hover     — rgb(66,71,85) */
+  --surface-subtle:             rgba(255,255,255,0.03);  /* subtle row hover */
 
   /* ── Text (dark) — passes WCAG AA on surface-base ── */
   --text-primary:   #F1F5FB;   /* near-white with a hint of blue */
@@ -190,22 +190,39 @@ h1, h2, h3 {
  * the token-driven utilities (bg-surface-base, text-ink-primary, etc.).
  * ───────────────────────────────────────────────────────────────────────────── */
 
-/* App-wide background anchors */
+/* App-wide background anchors.
+ * Note: the component layer uses arbitrary-value classes like `bg-[#0a0f1c]`,
+ * `bg-[#0a0f1c]/40` etc. We target Tailwind's GENERATED class names directly
+ * (escaped form .bg-\[\#0a0f1c\]) — the older [class*="bg-[#0a0f1c]"] attribute
+ * substring match parsed inconsistently across browsers, leaving those
+ * components stuck at the hard-coded hex. */
 .dark .bg-slate-950,
-.dark [class*="bg-[#0a0f1c]"] { background-color: var(--surface-elevated); }
+.dark .bg-\[\#0a0f1c\],
+.dark .bg-\[\#06080F\],
+.dark .bg-\[\#0B0F1B\] { background-color: var(--surface-elevated); }
 .dark .bg-slate-900 { background-color: var(--surface-overlay); }
 .dark .bg-slate-800 { background-color: var(--surface-interactive); }
 
-/* Opacity-bearing variants in dark mode — matched to lifted surface-base */
-.dark .bg-slate-950\/80 { background-color: rgba(20, 23, 31, 0.85); }
+/* Opacity-bearing arbitrary-value variants — matched to new surface-elevated rgb(35,39,47) */
+.dark .bg-\[\#0a0f1c\]\/40 { background-color: rgba(35, 39, 47, 0.4); }
+.dark .bg-\[\#0a0f1c\]\/60 { background-color: rgba(35, 39, 47, 0.6); }
+.dark .bg-\[\#0a0f1c\]\/80 { background-color: rgba(35, 39, 47, 0.8); }
+
+/* Opacity-bearing slate variants — matched to lifted surface-base rgb(27,30,37) */
+.dark .bg-slate-950\/80 { background-color: rgba(27, 30, 37, 0.85); }
 .dark .bg-slate-950\/40,
 .dark .bg-slate-950\/50,
-.dark .bg-slate-950\/60 { background-color: rgba(20, 23, 31, 0.55); }
+.dark .bg-slate-950\/60 { background-color: rgba(27, 30, 37, 0.55); }
 
 .light .bg-slate-950 { background-color: var(--surface-base); }
 .light .bg-slate-900 { background-color: var(--surface-elevated); }
 .light .bg-slate-800 { background-color: var(--surface-interactive); }
-.light [class*="bg-[#0a0f1c]"] { background-color: var(--surface-elevated); }
+.light .bg-\[\#0a0f1c\],
+.light .bg-\[\#06080F\],
+.light .bg-\[\#0B0F1B\] { background-color: var(--surface-elevated); }
+.light .bg-\[\#0a0f1c\]\/40 { background-color: rgba(255, 255, 255, 0.5); }
+.light .bg-\[\#0a0f1c\]\/60 { background-color: rgba(255, 255, 255, 0.7); }
+.light .bg-\[\#0a0f1c\]\/80 { background-color: rgba(255, 255, 255, 0.85); }
 
 /* Opacity-bearing variants used by sticky thead, hover states, etc. */
 .light .bg-slate-950\/80,
