@@ -52,9 +52,9 @@ fs.writeFileSync('$DEPLOY_DIR/index.html', updated);
 console.log('  Service worker registration injected into index.html');
 "
 
-# Copy service worker and logo
+# Copy service worker (logo is now inlined into Reconciler.html as a data URI
+# via the bundled import in src/assets/, so no separate file is needed)
 cp sw.js "$DEPLOY_DIR/"
-cp public/lotusworks-logo.png "$DEPLOY_DIR/"
 
 echo "==> Deploying to gh-pages branch..."
 cd "$DEPLOY_DIR"

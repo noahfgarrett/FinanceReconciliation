@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { fmtUsdCents, fmtHours } from '@/lib/format'
 import { generateInvoicePdf, downloadPdf } from '@/exports/invoicePdf'
 import type { InvoiceData } from '@/exports/invoicePdf'
+import logoUrl from '@/assets/lotusworks-logo.png'
 
 interface InvoicePreviewModalProps {
   open: boolean
@@ -112,7 +113,7 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <img
-                  src="/lotusworks-logo.png"
+                  src={logoUrl}
                   alt="LotusWorks"
                   className="w-12 h-12 object-contain"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
