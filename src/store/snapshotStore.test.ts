@@ -25,9 +25,13 @@ describe('snapshotStore.importBatch', () => {
       parsedPdfs: [{
         employeeCode: '2000', employeeName: 'X Y',
         payPeriodStart: '2026-04-06', payPeriodEnd: '2026-04-19',
-        entries: [{ date: '2026-04-06', payCode: 'REG', allocation: 'ACM', hoursTotal: 50, weekStart: '2026-04-06' }],
+        entries: [{
+          date: '2026-04-06', payCode: 'REG', allocation: 'ACM', hoursTotal: 50, weekStart: '2026-04-06',
+          confidence: 1, confidenceReasons: [],
+        }],
         weeklyTotals: { '2026-04-06': 50 },
         rawText: '',
+        pageCount: 0,
       }],
       periodLabel: 'April 2026',
     })

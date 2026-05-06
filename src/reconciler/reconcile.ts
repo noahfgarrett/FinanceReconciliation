@@ -132,6 +132,9 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       dtDollars: round2(split.dtHrs * rates.dt),
       flags,
       reviewed: false,
+      confidence: 1,
+      confidenceReasons: [],
+      sources: [],
     })
   }
 

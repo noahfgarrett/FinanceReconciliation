@@ -67,6 +67,8 @@ export function generateSampleData(): SampleData {
             allocation: project.allocation,
             hoursTotal: round2(perDay),
             weekStart: isoMonday(date),
+            confidence: 1,
+            confidenceReasons: [],
           })
         }
 
@@ -104,6 +106,7 @@ export function generateSampleData(): SampleData {
       entries: entries.slice(0, half),
       weeklyTotals: filterWeekly(weeklyTotals, weekStarts.slice(0, 2)),
       rawText: `Employee: ${e.firstName} ${e.lastName} ${e.code}`,
+      pageCount: 0,
     })
     parsedPdfs.push({
       employeeCode: e.code,
@@ -113,6 +116,7 @@ export function generateSampleData(): SampleData {
       entries: entries.slice(half),
       weeklyTotals: filterWeekly(weeklyTotals, weekStarts.slice(2, 4)),
       rawText: `Employee: ${e.firstName} ${e.lastName} ${e.code}`,
+      pageCount: 0,
     })
   }
 

@@ -25,9 +25,13 @@ const pdf = (
   employeeName: 'X Y',
   payPeriodStart: weekStart,
   payPeriodEnd: weekStart,
-  entries: [{ date: weekStart, payCode: 'REG', allocation, hoursTotal: hours, weekStart }],
+  entries: [{
+    date: weekStart, payCode: 'REG', allocation, hoursTotal: hours, weekStart,
+    confidence: 1, confidenceReasons: [],
+  }],
   weeklyTotals: { [weekStart]: hours },
   rawText: '',
+  pageCount: 0,
 })
 
 const excel = (code: string, project: string, reg: number, ot = 0): ExcelRow => ({
