@@ -96,8 +96,16 @@ export function ImportFlow() {
         })
 
         const parsedPdfs = pdfResults
-          .map((r) => r.result.parsed)
-          .filter((p): p is NonNullable<typeof p> => p !== null)
+          .filter((r) => r.result.parsed !== null)
+          .map((r) => {
+            const base = r.result.parsed!
+            // Attach raw PDF bytes for offline source verification.
+            // The bytes are stored on the runtime ParsedPdfWithBytes shape; the
+            // Zod ParsedPdf schema does not validate them.
+            return r.result.pdfBytes
+              ? { ...base, pdfBytes: r.result.pdfBytes }
+              : base
+          })
 
         const allWarnings: RowFlag[] = [
           ...excelResultRef.current.warnings,

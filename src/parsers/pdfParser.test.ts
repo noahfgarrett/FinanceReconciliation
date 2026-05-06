@@ -3,10 +3,15 @@ import type { PdfParseResult } from './pdfParser'
 
 // ---- Mock pdfjs-dist via pdfjsConfig ----
 
-type FakeTextItem = { str: string; transform: [number, number, number, number, number, number] }
+type FakeTextItem = {
+  str: string
+  transform: [number, number, number, number, number, number]
+  width?: number
+  height?: number
+}
 
-function makeItem(str: string, x: number, y: number): FakeTextItem {
-  return { str, transform: [1, 0, 0, 1, x, y] }
+function makeItem(str: string, x: number, y: number, width = 60, height = 10): FakeTextItem {
+  return { str, transform: [1, 0, 0, 1, x, y], width, height }
 }
 
 function makeFakeDoc(pages: FakeTextItem[][]): unknown {
@@ -45,6 +50,7 @@ function buildTimesheetPage(): FakeTextItem[] {
     makeItem('04/06/2026', 50, 700),
     makeItem('REG', 120, 700),
     makeItem('ACM-001', 200, 700),
+    makeItem('8.0', 400, 700),
     makeItem('8.0', 500, 700),
 
     makeItem('04/07/2026', 50, 685),
@@ -120,6 +126,45 @@ describe('parsePdf', () => {
     expect(result.warnings[0].code).toBe('parse-failure')
     expect(result.warnings[0].severity).toBe('error')
     expect(result.warnings[0].message).toContain('employee header')
+  })
+
+  it('emits confidence=1.0 + a non-zero source bbox for a clean entry', async () => {
+    mockPdfjsConfig([buildTimesheetPage()])
+    const { parsePdf } = await import('./pdfParser')
+
+    const result = await parsePdf(new ArrayBuffer(8), 'noah-2026-04.pdf')
+
+    expect(result.parsed).not.toBeNull()
+    const first = result.parsed!.entries[0]
+    expect(first.confidence).toBe(1)
+    expect(first.confidenceReasons).toEqual([])
+    expect(first.source).toBeDefined()
+    expect(first.source!.pageIndex).toBe(1)
+    expect(first.source!.width).toBeGreaterThan(0)
+    expect(first.source!.height).toBeGreaterThan(0)
+
+    expect(result.parsed!.pageCount).toBe(1)
+    expect(result.pdfBytes).not.toBeNull()
+  })
+
+  it('lowers confidence when hours are out of typical range', async () => {
+    const page: FakeTextItem[] = [
+      makeItem('Employee: Jane Doe 3001', 50, 750),
+      makeItem('Period: 04/06/2026 - 04/12/2026', 50, 730),
+      // 18 hours is above the 16-hour typical cap
+      makeItem('04/06/2026', 50, 700),
+      makeItem('REG', 120, 700),
+      makeItem('CAL-SVC', 200, 700),
+      makeItem('18.0', 500, 700),
+    ]
+    mockPdfjsConfig([page])
+    const { parsePdf } = await import('./pdfParser')
+
+    const result = await parsePdf(new ArrayBuffer(8))
+    expect(result.parsed).not.toBeNull()
+    const e = result.parsed!.entries[0]
+    expect(e.confidence).toBeLessThan(1)
+    expect(e.confidenceReasons.some((r) => r.includes('outside typical'))).toBe(true)
   })
 
   it('skips lines with date-only (no allocation, no hours) without crashing', async () => {
