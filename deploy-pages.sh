@@ -56,6 +56,18 @@ console.log('  Service worker registration injected into index.html');
 # via the bundled import in src/assets/, so no separate file is needed)
 cp sw.js "$DEPLOY_DIR/"
 
+# Copy any worker chunks the bundle references at runtime (Vite emits these
+# as separate files even with viteSingleFile, because Worker(new URL(...))
+# imports must resolve at runtime). Without these, real Excel/PDF parsing
+# would 404 on the live site.
+shopt -s nullglob
+WORKER_FILES=(dist/*.worker-*.js dist/*.worker-*.js.map)
+if (( ${#WORKER_FILES[@]} > 0 )); then
+  cp "${WORKER_FILES[@]}" "$DEPLOY_DIR/"
+  echo "  Copied ${#WORKER_FILES[@]} worker chunk(s)"
+fi
+shopt -u nullglob
+
 echo "==> Deploying to gh-pages branch..."
 cd "$DEPLOY_DIR"
 git init -q
