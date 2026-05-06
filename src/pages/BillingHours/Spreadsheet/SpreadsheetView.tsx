@@ -328,7 +328,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
 
       <div
         ref={scrollRef}
-        className="overflow-auto rounded-xl border border-slate-800"
+        className="relative overflow-auto rounded-xl border border-slate-800"
         style={{ maxHeight: 'calc(100vh - 340px)' }}
       >
         <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
@@ -366,7 +366,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
               </tr>
             ))}
           </thead>
-          <tbody style={{ height: totalSize }}>
+          <tbody style={{ height: totalSize, position: 'relative' }}>
             {tableRows.length === 0 && (
               <tr>
                 <td
