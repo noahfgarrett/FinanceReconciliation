@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
+  History,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Modal } from '@/components/ui/Modal'
@@ -459,13 +460,27 @@ export default function HistoryPage(): React.JSX.Element {
       <PageHeader title="Snapshots" subtitle="Saved monthly reconciliations" />
 
       {sorted.length === 0 ? (
-        <div className="mx-8 mt-16 flex flex-col items-center gap-3 text-center">
-          <p className="text-slate-500 text-sm">No snapshots saved yet.</p>
+        <div className="mx-8 mt-12 flex flex-col items-center gap-4 text-center px-6 py-16 rounded-2xl border border-dashed border-slate-800 bg-[#0a0f1c]/40 animate-fade-in">
+          <div className="relative">
+            <span aria-hidden className="absolute -inset-2 rounded-2xl bg-lw-orange-500/15 blur-xl" />
+            <div className="relative w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center">
+              <History className="w-6 h-6 text-lw-orange-400" />
+            </div>
+          </div>
+          <div className="max-w-sm">
+            <h2 className="font-display text-lg font-semibold text-slate-100 tracking-tight">
+              No snapshots yet
+            </h2>
+            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+              Snapshots preserve a frozen view of a month&rsquo;s reconciliation. Save your first one
+              from the Billing Hours page.
+            </p>
+          </div>
           <button
-            className="text-lw-orange-400 text-sm hover:underline"
+            className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-b from-lw-orange-500 to-lw-orange-600 hover:from-lw-orange-400 hover:to-lw-orange-500 text-white text-sm font-medium tracking-tight shadow-glow-orange transition-all"
             onClick={() => setActivePage('billing-hours')}
           >
-            Go to Billing Hours to load sample data
+            Go to Billing Hours
           </button>
         </div>
       ) : (

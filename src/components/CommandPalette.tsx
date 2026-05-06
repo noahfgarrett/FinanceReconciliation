@@ -171,11 +171,11 @@ function useCommands(): Command[] {
 }
 
 const BADGE_COLORS: Record<string, string> = {
-  Navigate: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  Data: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  Appearance: 'text-lw-orange-400 bg-lw-orange-400/10 border-lw-orange-400/20',
-  Export: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-  App: 'text-slate-400 bg-slate-700/40 border-slate-600',
+  Navigate: 'text-lw-blue-300 bg-lw-blue-500/10 border-lw-blue-500/25',
+  Data: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25',
+  Appearance: 'text-lw-orange-300 bg-lw-orange-500/10 border-lw-orange-500/25',
+  Export: 'text-purple-300 bg-purple-500/10 border-purple-500/25',
+  App: 'text-slate-300 bg-slate-700/30 border-slate-600/50',
 }
 
 export function CommandPalette(): React.JSX.Element | null {
@@ -236,15 +236,30 @@ export function CommandPalette(): React.JSX.Element | null {
   if (!showCommandPalette) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[14vh] p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={() => setShowCommandPalette(false)}
       />
-      <div className="relative w-full max-w-xl rounded-xl bg-[#0a0f1c] border border-slate-800 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-xl rounded-2xl bg-[#0a0f1c] border border-slate-800 shadow-2xl overflow-hidden animate-scale-in">
+        {/* top brand sheen */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lw-orange-500/60 to-transparent"
+        />
+        {/* radial brand glow on hover */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-50"
+          style={{
+            background:
+              'radial-gradient(120% 60% at 50% -20%, rgba(244,123,32,0.10) 0%, transparent 60%)',
+          }}
+        />
+
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
-          <Search className="w-4 h-4 text-slate-500 shrink-0" />
+        <div className="relative flex items-center gap-3 px-4 py-3.5 border-b border-slate-800">
+          <Search className="w-4 h-4 text-lw-orange-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -255,17 +270,19 @@ export function CommandPalette(): React.JSX.Element | null {
               setSelectedIndex(0)
             }}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
+            className="flex-1 bg-transparent text-[15px] font-medium text-slate-100 placeholder-slate-500 outline-none tracking-tight"
           />
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-500 font-mono shrink-0">
-            ESC
-          </kbd>
+          <span className="kbd shrink-0">ESC</span>
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-80 overflow-y-auto py-2">
+        <div ref={listRef} className="relative max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-slate-500">No commands match</div>
+            <div className="px-4 py-10 text-center">
+              <Search className="w-6 h-6 mx-auto text-slate-700 mb-2" />
+              <div className="text-sm text-slate-500">No commands match</div>
+              <div className="text-xs text-slate-600 mt-1">Try a different phrase.</div>
+            </div>
           ) : (
             filtered.map((cmd, index) => {
               const Icon = cmd.icon
@@ -276,17 +293,36 @@ export function CommandPalette(): React.JSX.Element | null {
                   key={cmd.id}
                   onClick={cmd.action}
                   onMouseEnter={() => setSelectedIndex(index)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                    isSelected ? 'bg-slate-800/70' : 'hover:bg-slate-900/50'
+                  className={`relative w-full flex items-center gap-3 px-3 mx-2 my-0.5 rounded-lg py-2.5 text-left transition-all duration-150 ease-out-expo ${
+                    isSelected
+                      ? 'bg-lw-orange-500/12 text-slate-100 ring-1 ring-inset ring-lw-orange-500/25'
+                      : 'hover:bg-slate-900/70 text-slate-300'
                   }`}
                 >
-                  <Icon className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="flex-1 text-sm text-slate-200">{cmd.label}</span>
+                  {isSelected && (
+                    <span
+                      aria-hidden
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 bg-lw-orange-500 rounded-r-full shadow-[0_0_8px_rgba(244,123,32,0.6)]"
+                    />
+                  )}
+                  <div
+                    className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected
+                        ? 'bg-lw-orange-500/20 text-lw-orange-300'
+                        : 'bg-slate-900 text-slate-400'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="flex-1 text-[13px] font-medium tracking-tight">{cmd.label}</span>
                   <span
-                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${badgeClass}`}
+                    className={`text-[10px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border ${badgeClass}`}
                   >
                     {cmd.category}
                   </span>
+                  {isSelected && (
+                    <span className="kbd font-mono ml-1">↵</span>
+                  )}
                 </button>
               )
             })
@@ -294,10 +330,22 @@ export function CommandPalette(): React.JSX.Element | null {
         </div>
 
         {/* Footer hint */}
-        <div className="px-4 py-2 border-t border-slate-800 flex items-center gap-3 text-[10px] text-slate-600">
-          <span><kbd className="font-mono">↑↓</kbd> navigate</span>
-          <span><kbd className="font-mono">↵</kbd> select</span>
-          <span><kbd className="font-mono">ESC</kbd> close</span>
+        <div className="relative px-4 py-2.5 border-t border-slate-800 flex items-center gap-4 text-[10.5px] text-slate-500 bg-slate-950/40">
+          <span className="flex items-center gap-1.5">
+            <span className="kbd">↑</span>
+            <span className="kbd">↓</span>
+            navigate
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="kbd">↵</span>
+            select
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="kbd">ESC</span>
+            close
+          </span>
+          <div className="flex-1" />
+          <span className="tabular-nums text-slate-600">{filtered.length} commands</span>
         </div>
       </div>
     </div>

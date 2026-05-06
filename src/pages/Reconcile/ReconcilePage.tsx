@@ -32,15 +32,21 @@ export default function ReconcilePage(): React.ReactElement {
 
       <div className="mx-8 mt-6 space-y-6">
         {/* Drop zone */}
-        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-slate-700 bg-[#0a0f1c] px-8 py-16 text-center opacity-60 select-none cursor-not-allowed">
-          <UploadCloud className="w-10 h-10 text-slate-500" />
-          <div>
-            <div className="text-base font-semibold text-slate-300 mb-1">
+        <div className="relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-700 bg-[#0a0f1c] px-8 py-20 text-center select-none overflow-hidden">
+          <div aria-hidden className="absolute inset-0 bg-mesh opacity-50 pointer-events-none" />
+          <span className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-[9.5px] font-semibold uppercase tracking-[0.14em] text-lw-orange-300 bg-lw-orange-500/10 border border-lw-orange-500/30">
+            Coming soon
+          </span>
+          <div className="relative w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center">
+            <UploadCloud className="w-7 h-7 text-slate-500" />
+          </div>
+          <div className="relative">
+            <div className="font-display text-xl font-semibold text-slate-200 tracking-tight">
               Drop a client invoice spreadsheet here
             </div>
-            <div className="text-sm text-slate-500 max-w-md">
+            <div className="text-sm text-slate-500 max-w-md mt-1.5 leading-relaxed">
               We&apos;ll compare it line-by-line against the current snapshot&apos;s billing rows.
-              Feature coming once we have invoice samples to design against.
+              Feature ships once we have real invoice samples to design against.
             </div>
           </div>
         </div>

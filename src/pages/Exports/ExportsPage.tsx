@@ -7,6 +7,7 @@ import {
   Eye,
   AlertCircle,
   CheckCircle2,
+  Inbox,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -514,8 +515,11 @@ export default function ExportsPage() {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-800 bg-[#0a0f1c]/40 px-6 py-8 text-center">
-      <p className="text-sm text-slate-500">{message}</p>
+    <div className="rounded-2xl border border-dashed border-slate-800 bg-[#0a0f1c]/40 px-6 py-12 text-center">
+      <div className="mx-auto w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-3">
+        <Inbox className="w-5 h-5 text-slate-500" />
+      </div>
+      <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">{message}</p>
     </div>
   )
 }
