@@ -87,12 +87,6 @@ export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: P
         }}
       />
       {status && <div className="text-xs text-slate-400 mt-3">{status}</div>}
-      {(!onExcel || !onPdfFolder) && (
-        <div className="text-xs text-slate-600 mt-3 italic">
-          File parsers ship in Phase 4-5 once real samples are available.
-          For now, use <strong>Load Sample Data</strong> to explore the app.
-        </div>
-      )}
     </div>
   )
 }
