@@ -38,13 +38,13 @@
   --brand-blue-950: #031D38;
   --brand-blue:     #0057A4;
 
-  /* ── Surfaces (dark) — slight blue undertone, never pure black ── */
-  --surface-base:               #06080F;        /* page background */
-  --surface-elevated:           #0B0F1B;        /* cards, sidenav */
-  --surface-overlay:            #11172A;        /* modals, drawers above cards */
-  --surface-interactive:        #131A2C;        /* buttons resting */
-  --surface-interactive-hover:  #1B2440;        /* buttons hover */
-  --surface-subtle:             rgba(255,255,255,0.02); /* subtle row hover */
+  /* ── Surfaces (dark) — soft charcoal with subtle blue undertone, ~Claude desktop lightness ── */
+  --surface-base:               #14171F;        /* page background */
+  --surface-elevated:           #1B1F28;        /* cards, sidenav */
+  --surface-overlay:            #232832;        /* modals, drawers above cards */
+  --surface-interactive:        #2A2F3B;        /* buttons resting */
+  --surface-interactive-hover:  #343A48;        /* buttons hover */
+  --surface-subtle:             rgba(255,255,255,0.025); /* subtle row hover */
 
   /* ── Text (dark) — passes WCAG AA on surface-base ── */
   --text-primary:   #F1F5FB;   /* near-white with a hint of blue */
@@ -196,11 +196,11 @@ h1, h2, h3 {
 .dark .bg-slate-900 { background-color: var(--surface-overlay); }
 .dark .bg-slate-800 { background-color: var(--surface-interactive); }
 
-/* Opacity-bearing variants in dark mode */
-.dark .bg-slate-950\/80 { background-color: rgba(6, 8, 15, 0.85); }
+/* Opacity-bearing variants in dark mode — matched to lifted surface-base */
+.dark .bg-slate-950\/80 { background-color: rgba(20, 23, 31, 0.85); }
 .dark .bg-slate-950\/40,
 .dark .bg-slate-950\/50,
-.dark .bg-slate-950\/60 { background-color: rgba(6, 8, 15, 0.55); }
+.dark .bg-slate-950\/60 { background-color: rgba(20, 23, 31, 0.55); }
 
 .light .bg-slate-950 { background-color: var(--surface-base); }
 .light .bg-slate-900 { background-color: var(--surface-elevated); }
