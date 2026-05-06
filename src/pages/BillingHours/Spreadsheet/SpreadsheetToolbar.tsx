@@ -141,7 +141,7 @@ export function SpreadsheetToolbar({
   const currentGroup = grouping[0] ?? ''
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 rounded-xl bg-slate-900/40 border border-slate-800 p-2 backdrop-blur-sm">
       {/* Row 1: search + density + groupby + export */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Global search */}
@@ -153,8 +153,8 @@ export function SpreadsheetToolbar({
             value={globalFilter}
             onChange={(e) => onGlobalFilterChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search… (/)"
-            className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-lw-orange-500/60"
+            placeholder="Search rows… ( / )"
+            className="w-full pl-8 pr-3 py-2 text-[13px] bg-slate-950 border border-slate-700 rounded-lg text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-lw-orange-500/30 focus:border-lw-orange-500/60 transition-all"
           />
         </div>
 

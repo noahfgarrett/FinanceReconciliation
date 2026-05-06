@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, Users } from 'lucide-react'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
 
@@ -121,12 +121,22 @@ export function ByEmployeeView({
   }
 
   return (
-    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-800 text-sm font-semibold text-slate-200">
-        By Employee
+    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden shadow-md animate-slide-up">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-lw-blue-500/10 border border-lw-blue-500/25 flex items-center justify-center">
+            <Users className="w-3.5 h-3.5 text-lw-blue-300" />
+          </div>
+          <div>
+            <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Employee</div>
+            <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
+              {rows.length} employees · click row to expand
+            </div>
+          </div>
+        </div>
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-slate-950">
+        <thead className="sticky top-0 bg-slate-950/80 backdrop-blur z-10">
           <tr>
             <Th sortKey="name" active={sortKey} dir={sortDir} onSort={handleSort}>
               Employee

@@ -79,6 +79,7 @@ export default function BillingHoursPage() {
             ? `${snap.periodLabel} · ${snap.employees.length} employees · ${Object.keys(configs).length} projects`
             : 'Drop your monthly Excel + PDF folder, or load sample data to explore'
         }
+        decoration={!snap ? <div className="absolute inset-0 bg-hero-glow" /> : undefined}
         actions={
           snap ? (
             <div className="flex gap-2">
@@ -108,27 +109,29 @@ export default function BillingHoursPage() {
             <div className="mx-8 mb-8">
               <div className="flex items-center gap-2 mb-3">
                 <Clock className="w-4 h-4 text-slate-500" />
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <span className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-[0.14em]">
                   Recent imports
                 </span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 stagger animate-fade-in">
                 {recentImports.map((entry, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800"
+                    className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-slate-700 hover:bg-slate-900/80 transition-colors group"
                   >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-lw-orange-400" />
-                      <span className="text-sm text-slate-300">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-md bg-lw-orange-500/10 border border-lw-orange-500/20 flex items-center justify-center">
+                        <Sparkles className="w-3.5 h-3.5 text-lw-orange-400 group-hover:rotate-12 transition-transform duration-300" />
+                      </div>
+                      <span className="text-sm text-slate-200 font-medium">
                         {entry.folderName ?? entry.excelName ?? 'Unknown import'}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-600">{relativeTime(entry.ts)}</span>
+                      <span className="text-xs text-slate-500 tabular-nums">{relativeTime(entry.ts)}</span>
                       {entry.folderName === 'Sample Data' && (
                         <button
-                          className="text-xs text-lw-orange-400 hover:text-lw-orange-300 transition-colors"
+                          className="text-xs font-medium text-lw-orange-400 hover:text-lw-orange-300 transition-colors px-2 py-1 rounded-md hover:bg-lw-orange-500/10"
                           onClick={() => {
                             const data = generateSampleData()
                             void importBatch(data).then(() =>
@@ -159,14 +162,19 @@ export default function BillingHoursPage() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-                    isActive ? 'text-lw-orange-400' : 'text-slate-500 hover:text-slate-300'
+                  className={`px-4 py-2.5 text-[13px] font-medium transition-colors relative tracking-tight ${
+                    isActive ? 'text-lw-orange-300' : 'text-slate-500 hover:text-slate-200'
                   }`}
                 >
                   {tab.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-lw-orange-500 rounded-t-full" />
-                  )}
+                  <span
+                    aria-hidden
+                    className={`absolute bottom-[-1px] left-3 right-3 h-0.5 rounded-t-full transition-all duration-200 ease-out-expo ${
+                      isActive
+                        ? 'bg-lw-orange-500 opacity-100 shadow-[0_0_8px_rgba(244,123,32,0.6)]'
+                        : 'bg-slate-700 opacity-0'
+                    }`}
+                  />
                 </button>
               )
             })}
