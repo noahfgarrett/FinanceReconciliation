@@ -213,6 +213,8 @@ function extractEntries(lines: TextLine[]): PdfTimesheetEntry[] {
       allocation: allocToken,
       hoursTotal,
       weekStart: isoMonday(dateIso),
+      confidence: 1,
+      confidenceReasons: [],
     })
   }
 
@@ -371,6 +373,7 @@ export async function parsePdf(buffer: ArrayBuffer, fileName?: string): Promise<
     entries,
     weeklyTotals,
     rawText,
+    pageCount: 0,
   }
 
   return { parsed, warnings }

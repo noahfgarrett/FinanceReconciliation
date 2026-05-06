@@ -53,6 +53,15 @@ export const FlagSchema = z.object({
 })
 export type RowFlag = z.infer<typeof FlagSchema>
 
+export const SourceLocationSchema = z.object({
+  pageIndex: z.number().int().min(1), // 1-based page number
+  x: z.number(), // PDF point coordinate (origin: bottom-left)
+  y: z.number(),
+  width: z.number().nonnegative(),
+  height: z.number().nonnegative(),
+})
+export type SourceLocation = z.infer<typeof SourceLocationSchema>
+
 export const WeeklyBillingSchema = z.object({
   employeeCode: z.string(),
   projectKey: z.string(),
@@ -67,6 +76,9 @@ export const WeeklyBillingSchema = z.object({
   flags: z.array(FlagSchema).default([]),
   notes: z.string().optional(),
   reviewed: z.boolean().default(false),
+  confidence: z.number().min(0).max(1).default(1),
+  confidenceReasons: z.array(z.string()).default([]),
+  sources: z.array(SourceLocationSchema).default([]),
 })
 export type WeeklyBilling = z.infer<typeof WeeklyBillingSchema>
 
@@ -113,6 +125,9 @@ export const PdfTimesheetEntrySchema = z.object({
   allocation: z.string(),
   hoursTotal: z.number(),
   weekStart: z.string(),
+  confidence: z.number().min(0).max(1).default(1),
+  confidenceReasons: z.array(z.string()).default([]),
+  source: SourceLocationSchema.optional(),
 })
 export type PdfTimesheetEntry = z.infer<typeof PdfTimesheetEntrySchema>
 
@@ -124,8 +139,18 @@ export const ParsedPdfSchema = z.object({
   entries: z.array(PdfTimesheetEntrySchema),
   weeklyTotals: z.record(z.string(), z.number()),
   rawText: z.string(),
+  pageCount: z.number().int().nonnegative().default(0),
 })
 export type ParsedPdf = z.infer<typeof ParsedPdfSchema>
+
+/**
+ * Runtime augmentation for ParsedPdf carrying the original PDF bytes.
+ * Stored on IDB via structured clone (no schema validation), and stripped
+ * from JSON exports because bytes are too heavy.
+ */
+export interface ParsedPdfWithBytes extends ParsedPdf {
+  pdfBytes?: ArrayBuffer
+}
 
 export const SnapshotSchema = z.object({
   id: z.string(),
