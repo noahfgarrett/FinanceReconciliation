@@ -75,6 +75,19 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       size: 80,
     },
 
+    // Confidence dot — rendered specially in SpreadsheetView
+    {
+      id: 'confidence',
+      header: 'Conf',
+      accessorKey: 'confidence',
+      // Cell content is rendered specially in SpreadsheetView; provide a value
+      // here so sorting works.
+      cell: (info) => info.row.original.confidence,
+      enableSorting: true,
+      meta: { align: 'left' },
+      size: 60,
+    },
+
     // Employee
     {
       id: 'employeeCode',

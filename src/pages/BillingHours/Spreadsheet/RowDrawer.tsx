@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
-import type { WeeklyBilling, ProjectConfig, Employee, ParsedPdf } from '@/persistence/schemas'
+import { X, ScanSearch } from 'lucide-react'
+import type {
+  WeeklyBilling, ProjectConfig, Employee, ParsedPdfWithBytes,
+} from '@/persistence/schemas'
 import { Badge } from '@/components/ui/Badge'
 import { fmtHours } from '@/lib/format'
+import { PdfSourceViewer } from '@/components/PdfSourceViewer'
 
 interface RowDrawerProps {
   row: WeeklyBilling
   configs: Record<string, ProjectConfig>
   employees: Employee[]
-  parsedPdfs: ParsedPdf[]
+  parsedPdfs: ParsedPdfWithBytes[]
   onClose: () => void
   onNoteChange: (row: WeeklyBilling, value: string) => void
   onReviewedChange: (row: WeeklyBilling, value: boolean) => void
@@ -31,6 +34,7 @@ export function RowDrawer({
   const [visible, setVisible] = useState(false)
   const [localNote, setLocalNote] = useState(row.notes ?? '')
   const [localReviewed, setLocalReviewed] = useState(row.reviewed)
+  const [sourceOpen, setSourceOpen] = useState(false)
 
   useEffect(() => {
     // Trigger transition after mount
@@ -84,6 +88,13 @@ export function RowDrawer({
     }),
   )
 
+  // PDF bytes for source viewer (first matching PDF for this employee, if any)
+  const sourcePdfBytes = relevantPdfs[0]?.pdfBytes ?? null
+  const sourcePdfName = relevantPdfs[0]
+    ? `${relevantPdfs[0].employeeName} (${relevantPdfs[0].employeeCode})`
+    : undefined
+  const confidencePct = Math.round((row.confidence ?? 1) * 100)
+
   return (
     <>
       {/* Backdrop */}
@@ -127,6 +138,45 @@ export function RowDrawer({
               <StatCard label="OT" value={fmtHours(row.otHrs)} accent={row.otHrs > 0} />
               {row.dtHrs > 0 && <StatCard label="DT" value={fmtHours(row.dtHrs)} accent />}
             </div>
+          </section>
+
+          {/* Source verification */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                Source verification
+              </h3>
+              <span
+                className={`text-[11px] tabular-nums ${
+                  confidencePct >= 85
+                    ? 'text-emerald-400'
+                    : confidencePct >= 60
+                    ? 'text-amber-400'
+                    : 'text-red-400'
+                }`}
+              >
+                {confidencePct}% confidence
+              </span>
+            </div>
+            <button
+              onClick={() => setSourceOpen(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-slate-900 border border-slate-700 rounded-lg text-slate-200 hover:bg-slate-800 hover:border-slate-600 transition-colors"
+            >
+              <ScanSearch className="w-4 h-4" />
+              View source
+              {row.sources && row.sources.length > 0 && (
+                <span className="text-xs text-slate-500">
+                  ({row.sources.length} highlight{row.sources.length === 1 ? '' : 's'})
+                </span>
+              )}
+            </button>
+            {row.confidenceReasons && row.confidenceReasons.length > 0 && (
+              <ul className="mt-2 text-xs text-slate-400 list-disc pl-4 space-y-0.5">
+                {row.confidenceReasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {/* PDF Entries */}
@@ -207,6 +257,14 @@ export function RowDrawer({
           </section>
         </div>
       </div>
+
+      <PdfSourceViewer
+        open={sourceOpen}
+        onClose={() => setSourceOpen(false)}
+        pdfBytes={sourcePdfBytes}
+        highlights={row.sources ?? []}
+        fileName={sourcePdfName}
+      />
     </>
   )
 }
