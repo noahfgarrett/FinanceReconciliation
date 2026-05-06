@@ -6,7 +6,7 @@ export interface WorkbookOptions {
   configs: Record<string, ProjectConfig>
 }
 
-const ORANGE_HEX = 'FFF97316'
+const ORANGE_HEX = 'FFF47B20' // LotusWorks brand orange
 const WHITE_HEX = 'FFFFFFFF'
 const SLATE_100_HEX = 'FFF1F5F9'
 const SLATE_700_HEX = 'FF334155'

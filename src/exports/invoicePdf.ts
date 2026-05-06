@@ -19,7 +19,7 @@ const CONTENT_W = PAGE_W - MARGIN * 2
 const SLATE_900 = rgb(0.07, 0.09, 0.14)
 const SLATE_600 = rgb(0.27, 0.33, 0.42)
 const SLATE_400 = rgb(0.58, 0.64, 0.72)
-const ORANGE = rgb(0.976, 0.451, 0.086) // #f97316
+const ORANGE = rgb(0.957, 0.482, 0.125) // #F47B20 — LotusWorks brand orange
 
 interface LineItem {
   project: string
@@ -323,7 +323,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
     opacity: 0.3,
   })
 
-  let footY = footerTopY + 8
+  const footY = footerTopY + 8
   if (data.client.paymentTerms) {
     drawText(
       page,
