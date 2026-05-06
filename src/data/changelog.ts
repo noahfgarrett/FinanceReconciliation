@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.1.0',
+    date: '2026-05-06T18:00:00Z',
+    type: 'feature',
+    notes: `### Source verification
+- Each parsed timesheet entry now has a **confidence score** (0–100%) and tracks its source bounding box on the original PDF.
+- New **Confidence** column on the Spreadsheet view with green/amber/red dots; tooltip shows the score and the parser's reasoning when low.
+- New **"Needs review"** quick-filter chip in the toolbar — filters to rows under 85% confidence.
+- New **View source** button on the row drawer opens the original PDF inline with the source line(s) outlined in brand orange. Works offline since the original PDF bytes are stored locally.
+- JSON exports remain compact: PDF bytes are stripped, only metadata + bounding boxes export.`,
+  },
+  {
     version: '1.0.2',
     date: '2026-05-06T15:00:00Z',
     type: 'fix',
