@@ -33,10 +33,10 @@ export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: P
         }}
         onDragLeave={() => setHover(false)}
         onDrop={onDrop}
-        className={`relative rounded-2xl border-2 border-dashed transition-all duration-300 ease-out-expo overflow-hidden ${
+        className={`relative rounded-2xl border-2 border-dashed bg-[#0a0f1c] transition-all duration-300 ease-out-expo overflow-hidden ${
           hover
-            ? 'border-lw-orange-500 bg-lw-orange-500/[0.04] scale-[1.005]'
-            : 'border-slate-800 bg-slate-900/30 hover:border-slate-700'
+            ? 'border-lw-orange-500 scale-[1.005]'
+            : 'border-slate-700 hover:border-slate-600'
         } ${busy ? 'opacity-60 pointer-events-none' : ''}`}
       >
         {/* decorative gradient mesh */}
