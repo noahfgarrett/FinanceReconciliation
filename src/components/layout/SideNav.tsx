@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useUiStore } from '@/store/uiStore'
 import type { PageId } from '@/types'
+import logoUrl from '@/assets/lotusworks-logo.png'
 
 interface NavItem {
   id: PageId
@@ -53,7 +54,7 @@ export function SideNav() {
             className="absolute -inset-1 rounded-xl bg-lw-orange-500/25 blur-md"
           />
           <img
-            src="/lotusworks-logo.png"
+            src={logoUrl}
             alt="LotusWorks"
             className="relative w-9 h-9 rounded-lg object-contain bg-slate-900/80 p-1 ring-1 ring-lw-orange-500/30"
           />

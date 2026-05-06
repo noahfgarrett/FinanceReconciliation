@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import type { Client, ProjectConfig, Snapshot } from '@/persistence/schemas'
 import { useSnapshotStore } from '@/store/snapshotStore'
+import logoUrl from '@/assets/lotusworks-logo.png'
 
 export interface InvoiceData {
   client: Client
@@ -104,7 +105,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
   // --- Embed logo ---
   let logoHeight = 0
   try {
-    const logoBuf = await fetch('/lotusworks-logo.png').then((r) => r.arrayBuffer())
+    const logoBuf = await fetch(logoUrl).then((r) => r.arrayBuffer())
     const logoImg = await pdfDoc.embedPng(logoBuf)
     const intrinsic = logoImg.size()
     const maxDim = 60

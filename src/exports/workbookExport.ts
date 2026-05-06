@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
+import logoUrl from '@/assets/lotusworks-logo.png'
 
 export interface WorkbookOptions {
   snapshot: Snapshot
@@ -65,7 +66,7 @@ export async function generateWorkbook(opts: WorkbookOptions): Promise<Uint8Arra
   // Embed logo
   let logoImageId: number | null = null
   try {
-    const logoBuf = await fetch('/lotusworks-logo.png').then((r) => r.arrayBuffer())
+    const logoBuf = await fetch(logoUrl).then((r) => r.arrayBuffer())
     logoImageId = workbook.addImage({
       buffer: logoBuf as Buffer,
       extension: 'png',
