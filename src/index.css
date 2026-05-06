@@ -192,14 +192,32 @@ h1, h2, h3 {
 
 /* App-wide background anchors */
 .dark .bg-slate-950,
-.dark [class*="bg-\\[\\#0a0f1c\\]"] { background-color: var(--surface-elevated); }
+.dark [class*="bg-[#0a0f1c]"] { background-color: var(--surface-elevated); }
 .dark .bg-slate-900 { background-color: var(--surface-overlay); }
 .dark .bg-slate-800 { background-color: var(--surface-interactive); }
+
+/* Opacity-bearing variants in dark mode */
+.dark .bg-slate-950\/80 { background-color: rgba(6, 8, 15, 0.85); }
+.dark .bg-slate-950\/40,
+.dark .bg-slate-950\/50,
+.dark .bg-slate-950\/60 { background-color: rgba(6, 8, 15, 0.55); }
 
 .light .bg-slate-950 { background-color: var(--surface-base); }
 .light .bg-slate-900 { background-color: var(--surface-elevated); }
 .light .bg-slate-800 { background-color: var(--surface-interactive); }
-.light [class*="bg-\\[\\#0a0f1c\\]"] { background-color: var(--surface-elevated); }
+.light [class*="bg-[#0a0f1c]"] { background-color: var(--surface-elevated); }
+
+/* Opacity-bearing variants used by sticky thead, hover states, etc. */
+.light .bg-slate-950\/80,
+.light .bg-slate-950\/40,
+.light .bg-slate-950\/60,
+.light .bg-slate-950\/50 { background-color: rgba(247, 244, 239, 0.7); }
+
+.light .bg-slate-900\/40,
+.light .bg-slate-900\/50,
+.light .bg-slate-900\/60,
+.light .bg-slate-900\/70,
+.light .bg-slate-900\/80 { background-color: rgba(255, 255, 255, 0.7); }
 
 /* Borders */
 .dark .border-slate-800 { border-color: var(--border-default); }

@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.0',
+    date: '2026-05-06T00:00:00Z',
+    type: 'major',
+    notes: `### Premium visual polish — v1.0
+- Rebuilt theme on a proper CSS variable token system; both dark and light modes are now first-class
+- Updated to authoritative LotusWorks brand colors (Lotus Orange #F47B20, Lotus Blue #0057A4)
+- New typography pairing with display + body fonts and a proper type scale
+- Motion system: page transitions, list reveals, hover-lift cards, polished modal entrances
+- Every page polished: side nav, KPI strip, tables, drawers, modals, command palette, settings
+- Refined empty states, hover states, focus rings throughout`,
+  },
+  {
     version: '0.9.0',
     date: '2026-05-06T06:00:00Z',
     type: 'major',
