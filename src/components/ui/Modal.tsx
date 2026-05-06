@@ -38,18 +38,23 @@ export function Modal({ open, onClose, title, children, width = 'md' }: ModalPro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[width]} rounded-xl bg-[#0a0f1c] border border-slate-800 shadow-2xl animate-fade-in`}
+        className={`relative w-full ${widths[width]} rounded-2xl bg-[#0a0f1c] border border-slate-800 shadow-2xl animate-scale-in overflow-hidden`}
       >
+        {/* top brand sheen */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lw-orange-500/50 to-transparent"
+        />
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-            <h2 className="text-base font-semibold text-slate-100">{title}</h2>
+            <h2 className="font-display text-base font-semibold text-slate-100 tracking-tight">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-900"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-100 hover:bg-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lw-orange-500/60"
               aria-label="Close"
             >
               <X className="w-4 h-4" />

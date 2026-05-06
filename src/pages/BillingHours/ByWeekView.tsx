@@ -1,5 +1,6 @@
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
+import { CalendarDays } from 'lucide-react'
 
 interface WeekAgg {
   weekStart: string
@@ -51,12 +52,22 @@ export function ByWeekView({
   )
 
   return (
-    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-800 text-sm font-semibold text-slate-200">
-        By Week
+    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden shadow-md animate-slide-up">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center">
+            <CalendarDays className="w-3.5 h-3.5 text-emerald-300" />
+          </div>
+          <div>
+            <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Week</div>
+            <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
+              {rows.length} weeks
+            </div>
+          </div>
+        </div>
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-slate-950">
+        <thead className="sticky top-0 bg-slate-950/80 backdrop-blur z-10">
           <tr>
             <Th>Week of</Th>
             <Th right># Employees</Th>
@@ -67,10 +78,12 @@ export function ByWeekView({
           </tr>
         </thead>
         <tbody>
-          {rows.map((agg) => (
+          {rows.map((agg, idx) => (
             <tr
               key={agg.weekStart}
-              className="border-b border-slate-900/60 last:border-0 hover:bg-slate-900/40"
+              className={`border-b border-slate-900/60 last:border-0 transition-colors hover:bg-lw-orange-500/[0.04] ${
+                idx % 2 === 1 ? 'bg-white/[0.012]' : ''
+              }`}
             >
               <td className="px-5 py-3">
                 <div className="text-slate-100 font-medium">{fmtWeek(agg.weekStart)}</div>

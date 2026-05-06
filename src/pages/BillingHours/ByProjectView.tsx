@@ -1,6 +1,7 @@
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
 import { Badge } from '@/components/ui/Badge'
+import { Boxes } from 'lucide-react'
 
 export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Record<string, ProjectConfig> }) {
   type Agg = { hours: number; reg: number; ot: number; dt: number; employees: Set<string>; weeks: Set<string> }
@@ -23,12 +24,22 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
   )
 
   return (
-    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-800 text-sm font-semibold text-slate-200">
-        By Project
+    <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden shadow-md animate-slide-up">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-lw-orange-500/10 border border-lw-orange-500/20 flex items-center justify-center">
+            <Boxes className="w-3.5 h-3.5 text-lw-orange-300" />
+          </div>
+          <div>
+            <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Project</div>
+            <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
+              {rows.length} projects
+            </div>
+          </div>
+        </div>
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-slate-950">
+        <thead className="sticky top-0 bg-slate-950/80 backdrop-blur z-10">
           <tr>
             <Th>Project</Th>
             <Th>OT Threshold</Th>
@@ -39,7 +50,7 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
           </tr>
         </thead>
         <tbody>
-          {rows.map(([key, agg]) => {
+          {rows.map(([key, agg], idx) => {
             const cfg = configs[key]
             const otHrs = snap.weeklyBilling
               .filter((r) => r.projectKey === key)
@@ -47,11 +58,16 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
             const regRate = cfg?.defaultRegularRate ?? 0
             const otRate = cfg?.otRateOverride ?? regRate * 1.5
             return (
-              <tr key={key} className="border-b border-slate-900/60 last:border-0 hover:bg-slate-900/40">
+              <tr
+                key={key}
+                className={`border-b border-slate-900/60 last:border-0 transition-colors hover:bg-lw-orange-500/[0.04] ${
+                  idx % 2 === 1 ? 'bg-white/[0.012]' : ''
+                }`}
+              >
                 <td className="px-5 py-3">
-                  <div className="text-slate-100 font-medium">{cfg?.displayName ?? key}</div>
-                  <div className="text-xs text-slate-500">
-                    {agg.employees.size} employees · {agg.weeks.size} weeks
+                  <div className="text-slate-100 font-medium tracking-tight">{cfg?.displayName ?? key}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    <span className="tabular-nums">{agg.employees.size}</span> employees · <span className="tabular-nums">{agg.weeks.size}</span> weeks
                   </div>
                 </td>
                 <td className="px-5 py-3">
