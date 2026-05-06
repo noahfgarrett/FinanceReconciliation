@@ -107,22 +107,27 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
         {/* White invoice paper */}
         <div className="bg-white text-slate-900 rounded-lg p-8 shadow-inner font-sans text-sm">
 
-          {/* Header */}
-          <div className="flex items-start justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <img
-                src="/lotusworks-logo.png"
-                alt="LotusWorks"
-                className="w-12 h-12 object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <div>
-                <div className="text-lg font-bold text-slate-900">LotusWorks</div>
-                <div className="text-xs text-slate-500">Finance &amp; Billing</div>
+          {/* Letterhead bar */}
+          <div className="-mx-8 -mt-8 mb-6 px-8 pt-6 pb-5 border-b-4 border-lw-orange-500 bg-gradient-to-r from-white to-lw-orange-50/40">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/lotusworks-logo.png"
+                  alt="LotusWorks"
+                  className="w-12 h-12 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+                <div>
+                  <div className="font-display text-xl font-bold text-slate-900 tracking-tight leading-none">LotusWorks</div>
+                  <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-[0.18em]">Finance &amp; Billing</div>
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-orange-500 tracking-tight">INVOICE</div>
+              <div className="text-right">
+                <div className="font-display text-3xl font-bold text-lw-orange-600 tracking-tight leading-none">INVOICE</div>
+                <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-[0.16em] tabular-nums">
+                  No. {invoiceNum}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -194,7 +199,7 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                     <td className="px-3 py-2 font-medium text-slate-800">{item.project}</td>
                     <td className="px-3 py-2 text-slate-500">{item.po}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmtHours(item.regHrs)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-orange-600">
+                    <td className="px-3 py-2 text-right tabular-nums text-lw-orange-600">
                       {fmtHours(item.otHrs)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
@@ -203,7 +208,7 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                     <td className="px-3 py-2 text-right tabular-nums">
                       {fmtUsdCents(item.regDollars)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-orange-600">
+                    <td className="px-3 py-2 text-right tabular-nums text-lw-orange-600">
                       {item.otDollars > 0 ? fmtUsdCents(item.otDollars) : '—'}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
@@ -226,7 +231,7 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                 <span className="tabular-nums">{fmtUsdCents(regTotal)}</span>
               </div>
               {otTotal > 0 && (
-                <div className="flex justify-between py-1 text-xs text-orange-600">
+                <div className="flex justify-between py-1 text-xs text-lw-orange-600">
                   <span>Overtime</span>
                   <span className="tabular-nums">{fmtUsdCents(otTotal)}</span>
                 </div>
@@ -237,9 +242,9 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                   <span className="tabular-nums">{fmtUsdCents(dtTotal)}</span>
                 </div>
               )}
-              <div className="flex justify-between py-2 mt-1 border-t border-slate-200 bg-orange-50 px-3 rounded-md">
-                <span className="font-bold text-slate-900 text-sm">Total Due</span>
-                <span className="font-bold text-orange-500 text-sm tabular-nums">
+              <div className="flex items-center justify-between py-3 mt-2 border-t-2 border-lw-orange-500 bg-gradient-to-r from-lw-orange-50 to-white px-4 rounded-md shadow-sm">
+                <span className="font-display font-bold text-slate-900 text-sm tracking-tight">Total Due</span>
+                <span className="font-display font-bold text-lw-orange-600 text-base tabular-nums">
                   {fmtUsdCents(grandTotal)}
                 </span>
               </div>

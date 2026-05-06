@@ -144,40 +144,40 @@ export default function FeedbackPage() {
         subtitle={`Send a bug report or share an idea — goes to ${RECIPIENT}`}
       />
 
-      <div className="max-w-2xl mx-auto px-8 py-8 space-y-6">
+      <div className="max-w-xl mx-auto px-8 py-10 space-y-6 stagger animate-fade-in">
         {/* Type toggle */}
         <div>
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-slate-500 mb-2">
+          <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500 mb-2.5">
             Type <span className="text-red-400">*</span>
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
                 setType('bug')
                 setErrors((e) => ({ ...e, type: false }))
               }}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${
+              className={`group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl border transition-all duration-200 ease-out-expo ${
                 type === 'bug'
-                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'
-              } ${errors.type ? 'ring-1 ring-red-500/50' : ''}`}
+                  ? 'bg-red-500/10 border-red-500/40 text-red-300 shadow-[0_0_20px_-8px_rgba(239,68,68,0.4)]'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+              } ${errors.type ? 'ring-2 ring-red-500/50' : ''}`}
             >
-              <Bug className="w-4 h-4" />
-              <span className="text-sm font-medium">Bug Report</span>
+              <Bug className={`w-4 h-4 transition-transform duration-200 ${type === 'bug' ? '' : 'group-hover:-rotate-12'}`} />
+              <span className="text-sm font-medium tracking-tight">Bug Report</span>
             </button>
             <button
               onClick={() => {
                 setType('enhancement')
                 setErrors((e) => ({ ...e, type: false }))
               }}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${
+              className={`group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl border transition-all duration-200 ease-out-expo ${
                 type === 'enhancement'
-                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'
-              } ${errors.type ? 'ring-1 ring-red-500/50' : ''}`}
+                  ? 'bg-lw-blue-500/10 border-lw-blue-500/40 text-lw-blue-300 shadow-[0_0_20px_-8px_rgba(0,87,164,0.4)]'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+              } ${errors.type ? 'ring-2 ring-red-500/50' : ''}`}
             >
-              <Lightbulb className="w-4 h-4" />
-              <span className="text-sm font-medium">Have an Idea</span>
+              <Lightbulb className={`w-4 h-4 transition-transform duration-200 ${type === 'enhancement' ? '' : 'group-hover:scale-110'}`} />
+              <span className="text-sm font-medium tracking-tight">Have an Idea</span>
             </button>
           </div>
         </div>
@@ -232,23 +232,27 @@ export default function FeedbackPage() {
           <label className="block text-[11px] font-medium uppercase tracking-wider text-slate-500 mb-2">
             Priority
           </label>
-          <div className="flex gap-1.5">
+          <div className="inline-flex gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800">
             {(['low', 'medium', 'high'] as const).map((p) => {
               const active: Record<Priority, string> = {
-                low: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
-                medium: 'bg-lw-orange-500/10 border-lw-orange-500/30 text-lw-orange-400',
-                high: 'bg-red-500/10 border-red-500/30 text-red-400',
+                low: 'bg-emerald-500/15 text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.35)]',
+                medium: 'bg-lw-orange-500/15 text-lw-orange-300 shadow-[inset_0_0_0_1px_rgba(244,123,32,0.35)]',
+                high: 'bg-red-500/15 text-red-300 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.35)]',
+              }
+              const dotColor: Record<Priority, string> = {
+                low: 'bg-emerald-400',
+                medium: 'bg-lw-orange-400',
+                high: 'bg-red-400',
               }
               return (
                 <button
                   key={p}
                   onClick={() => setPriority(p)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-medium border transition-all ${
-                    priority === p
-                      ? active[p]
-                      : 'bg-slate-900/40 border-slate-800 text-slate-500 hover:text-slate-300'
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-tight transition-all ${
+                    priority === p ? active[p] : 'text-slate-400 hover:text-slate-100'
                   }`}
                 >
+                  <span className={`w-1.5 h-1.5 rounded-full ${priority === p ? dotColor[p] : 'bg-slate-600'}`} />
                   {p.charAt(0).toUpperCase() + p.slice(1)}
                 </button>
               )
@@ -306,27 +310,28 @@ export default function FeedbackPage() {
         )}
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/60 mt-4 -mx-1 px-1 pt-5">
           <button
             onClick={openInEmail}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-lw-orange-500 hover:bg-lw-orange-600 text-white text-sm font-semibold shadow-[0_4px_14px_rgba(249,115,22,0.3)]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-b from-lw-orange-500 to-lw-orange-600 hover:from-lw-orange-400 hover:to-lw-orange-500 text-white text-sm font-medium tracking-tight shadow-glow-orange ring-1 ring-inset ring-white/10 active:translate-y-[0.5px] transition-all duration-150"
           >
             <Mail className="w-4 h-4" />
             Open in Email
           </button>
           <button
             onClick={() => void copyToClipboard()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-sm hover:bg-slate-800"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-100 text-sm transition-all"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <ClipboardCopy className="w-4 h-4" />}
             {copied ? 'Copied' : 'Copy to clipboard'}
           </button>
+          <div className="flex-1" />
           <button
             onClick={clearForm}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-slate-300 text-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-900/60 text-xs transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Clear
+            <RotateCcw className="w-3 h-3" />
+            Clear form
           </button>
         </div>
       </div>

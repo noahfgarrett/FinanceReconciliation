@@ -33,10 +33,21 @@ export function ClientsTab(): React.JSX.Element {
       </div>
 
       {clientList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-          <Users className="w-10 h-10 text-slate-700" />
-          <p className="text-slate-400 font-medium">No clients yet</p>
-          <p className="text-sm text-slate-600">Add a client to link it to projects and invoices</p>
+        <div className="rounded-2xl border border-dashed border-slate-800 bg-[#0a0f1c]/40 flex flex-col items-center justify-center py-16 px-6 text-center gap-4 animate-fade-in">
+          <div className="relative">
+            <span aria-hidden className="absolute -inset-2 rounded-2xl bg-lw-blue-500/15 blur-xl" />
+            <div className="relative w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center">
+              <Users className="w-6 h-6 text-lw-blue-300" />
+            </div>
+          </div>
+          <div className="max-w-sm">
+            <h3 className="font-display text-lg font-semibold text-slate-100 tracking-tight">
+              No clients yet
+            </h3>
+            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+              Add a client to link it to projects and generate branded invoices.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="rounded-xl border border-slate-800 overflow-hidden">
