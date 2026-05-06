@@ -37,9 +37,11 @@ interface ToolbarProps {
   quickFlaggedOnly: boolean
   quickErrorsOnly: boolean
   quickHasOt: boolean
+  quickNeedsReview: boolean
   onQuickFlaggedOnly: () => void
   onQuickErrorsOnly: () => void
   onQuickHasOt: () => void
+  onQuickNeedsReview: () => void
   visibleRowCount: number
   flaggedCount: number
   visibleTotal: number
@@ -60,9 +62,11 @@ export function SpreadsheetToolbar({
   quickFlaggedOnly,
   quickErrorsOnly,
   quickHasOt,
+  quickNeedsReview,
   onQuickFlaggedOnly,
   onQuickErrorsOnly,
   onQuickHasOt,
+  onQuickNeedsReview,
   visibleRowCount,
   flaggedCount,
   visibleTotal,
@@ -231,6 +235,12 @@ export function SpreadsheetToolbar({
           onClick={onQuickHasOt}
           tone="orange"
         />
+        <QuickChip
+          label="Needs review"
+          active={quickNeedsReview}
+          onClick={onQuickNeedsReview}
+          tone="purple"
+        />
 
         <div className="flex-1" />
 
@@ -251,7 +261,7 @@ interface QuickChipProps {
   label: string
   active: boolean
   onClick: () => void
-  tone: 'amber' | 'red' | 'orange'
+  tone: 'amber' | 'red' | 'orange' | 'purple'
 }
 
 const CHIP_TONES: Record<QuickChipProps['tone'], { active: string; inactive: string }> = {
@@ -265,6 +275,10 @@ const CHIP_TONES: Record<QuickChipProps['tone'], { active: string; inactive: str
   },
   orange: {
     active: 'bg-lw-orange-500/20 text-lw-orange-400 border-lw-orange-500/40',
+    inactive: 'bg-transparent text-slate-500 border-slate-700 hover:border-slate-600 hover:text-slate-400',
+  },
+  purple: {
+    active: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     inactive: 'bg-transparent text-slate-500 border-slate-700 hover:border-slate-600 hover:text-slate-400',
   },
 }

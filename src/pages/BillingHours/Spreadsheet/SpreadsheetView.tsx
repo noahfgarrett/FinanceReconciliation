@@ -43,6 +43,29 @@ const FLAG_TINT: Record<'error' | 'warn' | 'info', string> = {
   info: 'rgba(59,130,246,0.04)',
 }
 
+interface ConfidenceDotProps {
+  confidence: number
+  reasons: string[]
+}
+
+function ConfidenceDot({ confidence, reasons }: ConfidenceDotProps) {
+  const tone =
+    confidence >= 0.85 ? 'bg-emerald-400' :
+    confidence >= 0.6 ? 'bg-amber-400' : 'bg-red-400'
+  const pct = `${Math.round(confidence * 100)}%`
+  const tooltipReasons = reasons.slice(0, 2).join(' · ')
+  const tooltip = tooltipReasons ? `${pct} confidence — ${tooltipReasons}` : `${pct} confidence`
+  return (
+    <span
+      title={tooltip}
+      className="inline-flex items-center gap-1.5 cursor-help"
+    >
+      <span className={`inline-block w-2 h-2 rounded-full ${tone}`} aria-label={tooltip} />
+      <span className="text-[10px] text-slate-500 tabular-nums">{pct}</span>
+    </span>
+  )
+}
+
 function FlagChips({ flags }: { flags: RowFlag[] }) {
   if (flags.length === 0) return null
   const first = flags[0]
@@ -147,6 +170,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
   const [quickFlaggedOnly, setQuickFlaggedOnly] = useState(false)
   const [quickErrorsOnly, setQuickErrorsOnly] = useState(false)
   const [quickHasOt, setQuickHasOt] = useState(false)
+  const [quickNeedsReview, setQuickNeedsReview] = useState(false)
 
   const hasDt = useMemo(() => rows.some((r) => r.dtHrs > 0), [rows])
 
@@ -212,8 +236,9 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
     if (quickFlaggedOnly) result = result.filter((r) => r.flags.length > 0)
     if (quickErrorsOnly) result = result.filter((r) => r.flags.some((f) => f.severity === 'error'))
     if (quickHasOt) result = result.filter((r) => r.otHrs > 0)
+    if (quickNeedsReview) result = result.filter((r) => r.confidence < 0.85)
     return result
-  }, [rows, quickFlaggedOnly, quickErrorsOnly, quickHasOt])
+  }, [rows, quickFlaggedOnly, quickErrorsOnly, quickHasOt, quickNeedsReview])
 
   const table = useReactTable({
     data: filteredRows,
@@ -314,9 +339,11 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
         quickFlaggedOnly={quickFlaggedOnly}
         quickErrorsOnly={quickErrorsOnly}
         quickHasOt={quickHasOt}
+        quickNeedsReview={quickNeedsReview}
         onQuickFlaggedOnly={() => setQuickFlaggedOnly((v) => !v)}
         onQuickErrorsOnly={() => setQuickErrorsOnly((v) => !v)}
         onQuickHasOt={() => setQuickHasOt((v) => !v)}
+        onQuickNeedsReview={() => setQuickNeedsReview((v) => !v)}
         visibleRowCount={visibleData.length}
         flaggedCount={flaggedCount}
         visibleTotal={footerTotals.total}
@@ -460,6 +487,20 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                       return (
                         <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }}>
                           <FlagChips flags={originalRow?.flags ?? []} />
+                        </td>
+                      )
+                    }
+
+                    if (colId === 'confidence') {
+                      if (isGroupRow || !originalRow) {
+                        return <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }} />
+                      }
+                      return (
+                        <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }}>
+                          <ConfidenceDot
+                            confidence={originalRow.confidence ?? 1}
+                            reasons={originalRow.confidenceReasons ?? []}
+                          />
                         </td>
                       )
                     }
