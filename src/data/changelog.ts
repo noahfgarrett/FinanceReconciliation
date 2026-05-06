@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.9.0',
+    date: '2026-05-06T06:00:00Z',
+    type: 'major',
+    notes: `### Real file parsers
+- **Excel parser** with fuzzy header matching (Paycom may rename columns; we'll still find them)
+- **PDF parser** with content-pattern heuristic — extracts employee header, pay period, daily entries, weekly totals from the text content of any Paycom timesheet, regardless of layout
+- **Web Workers** keep the UI responsive while parsing (4 PDFs in parallel)
+- **Drop your monthly Excel + PDF folder** to populate the app with real data
+- "Load Sample Data" still works for evaluation without real files`,
+  },
+  {
     version: '0.8.0',
     date: '2026-05-05T22:00:00Z',
     type: 'feature',
