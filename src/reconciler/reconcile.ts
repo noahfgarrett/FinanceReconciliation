@@ -1,5 +1,6 @@
 import type {
-  Employee, ExcelRow, ParsedPdf, ProjectConfig, RowFlag, WeeklyBilling,
+  Employee, ExcelRow, ParsedPdf, ProjectConfig, RowFlag,
+  SourceLocation, WeeklyBilling,
 } from '@/persistence/schemas'
 import { resolveAllocationToProjectKey, slugifyProjectName } from './projectMatching'
 import { splitWeekHours, resolveRates } from './otCalculator'
@@ -63,6 +64,12 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     weekStart: string
     employeeCode: string
     projectKey: string
+    /** Min confidence over all contributing entries. */
+    confidence: number
+    /** Deduped union of contributing entry reasons. */
+    confidenceReasons: Set<string>
+    /** Source bboxes of every contributing entry (for the source viewer). */
+    sources: SourceLocation[]
   }
   const buckets = new Map<string, Bucket>()
 
@@ -76,8 +83,22 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       }
       const k = `${pdf.employeeCode}|${projectKey}|${entry.weekStart}`
       const existing = buckets.get(k)
-      if (existing) existing.hours += entry.hoursTotal
-      else buckets.set(k, { hours: entry.hoursTotal, weekStart: entry.weekStart, employeeCode: pdf.employeeCode, projectKey })
+      if (existing) {
+        existing.hours += entry.hoursTotal
+        existing.confidence = Math.min(existing.confidence, entry.confidence)
+        for (const r of entry.confidenceReasons) existing.confidenceReasons.add(r)
+        if (entry.source) existing.sources.push(entry.source)
+      } else {
+        buckets.set(k, {
+          hours: entry.hoursTotal,
+          weekStart: entry.weekStart,
+          employeeCode: pdf.employeeCode,
+          projectKey,
+          confidence: entry.confidence,
+          confidenceReasons: new Set(entry.confidenceReasons),
+          sources: entry.source ? [entry.source] : [],
+        })
+      }
     }
   }
 
@@ -132,9 +153,9 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       dtDollars: round2(split.dtHrs * rates.dt),
       flags,
       reviewed: false,
-      confidence: 1,
-      confidenceReasons: [],
-      sources: [],
+      confidence: b.confidence,
+      confidenceReasons: Array.from(b.confidenceReasons),
+      sources: b.sources,
     })
   }
 
