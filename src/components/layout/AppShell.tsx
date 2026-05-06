@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { SideNav } from './SideNav'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useUiStore } from '@/store/uiStore'
 import type { PageId } from '@/types'
 
@@ -28,9 +29,11 @@ export function AppShell() {
     <div className="flex h-screen bg-slate-950 text-slate-100">
       <SideNav />
       <main key={activePage} className="flex-1 overflow-y-auto page-enter">
-        <Suspense fallback={<PageFallback />}>
-          <Page />
-        </Suspense>
+        <ErrorBoundary key={activePage}>
+          <Suspense fallback={<PageFallback />}>
+            <Page />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </div>
   )

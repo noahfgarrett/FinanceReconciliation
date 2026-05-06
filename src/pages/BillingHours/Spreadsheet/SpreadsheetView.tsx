@@ -411,7 +411,6 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                     const colId = cell.column.id
                     const align = cell.column.columnDef.meta?.align
                     const isDim = cell.column.columnDef.meta?.dim
-                    const cellValue = cell.getValue()
 
                     // Render special cell types
                     if (colId === 'select') {
@@ -460,21 +459,14 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                       }
                       return (
                         <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }}>
-                          <FlagChips flags={(cellValue as RowFlag[]) ?? []} />
+                          <FlagChips flags={originalRow?.flags ?? []} />
                         </td>
                       )
                     }
 
                     if (colId === 'notes') {
-                      if (isGroupRow) {
+                      if (isGroupRow || !originalRow) {
                         return <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }} />
-                      }
-                      const noteData = cellValue as unknown as {
-                        type: string
-                        value: string
-                        row: WeeklyBilling
-                        onNoteChange: (row: WeeklyBilling, value: string) => void
-                        locked: boolean
                       }
                       return (
                         <td
@@ -484,25 +476,18 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <NoteCell
-                            value={noteData.value}
-                            row={noteData.row}
-                            onNoteChange={noteData.onNoteChange}
-                            locked={noteData.locked}
+                            value={originalRow.notes ?? ''}
+                            row={originalRow}
+                            onNoteChange={handleNoteChange}
+                            locked={isLocked}
                           />
                         </td>
                       )
                     }
 
                     if (colId === 'reviewed') {
-                      if (isGroupRow) {
+                      if (isGroupRow || !originalRow) {
                         return <td key={cell.id} className={`px-3 ${cellPy}`} style={{ width: cell.column.getSize() }} />
-                      }
-                      const reviewData = cellValue as unknown as {
-                        type: string
-                        value: boolean
-                        row: WeeklyBilling
-                        onReviewedChange: (row: WeeklyBilling, value: boolean) => void
-                        locked: boolean
                       }
                       return (
                         <td
@@ -512,10 +497,10 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ReviewedCell
-                            value={reviewData.value}
-                            row={reviewData.row}
-                            onReviewedChange={reviewData.onReviewedChange}
-                            locked={reviewData.locked}
+                            value={!!originalRow.reviewed}
+                            row={originalRow}
+                            onReviewedChange={handleReviewedChange}
+                            locked={isLocked}
                           />
                         </td>
                       )
