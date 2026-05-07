@@ -2,7 +2,7 @@ import type {
   Employee, ExcelRow, ParsedPdf, ProjectConfig, RowFlag,
   SourceLocation, WeeklyBilling,
 } from '@/persistence/schemas'
-import { resolveAllocationToProjectKey, slugifyProjectName } from './projectMatching'
+import { resolveAllocationToProjectKey } from './projectMatching'
 import { splitWeekHours, resolveRates } from './otCalculator'
 
 export interface ReconcileInput {
@@ -28,10 +28,28 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
   const unresolved = new Set<string>()
 
   const empMap = new Map(employees.map((e) => [e.code, e]))
-  const excelByEmpProject = new Map<string, ExcelRow>()
+
+  // Excel rows are now per-employee monthly summaries (one row per employee).
+  // If the same employee appears more than once we sum their hours.
+  interface ExcelEmployeeTotal {
+    regular: number
+    overtime: number
+    doubleTime: number
+  }
+  const excelByEmployee = new Map<string, ExcelEmployeeTotal>()
   for (const row of excelRows) {
-    const k = `${row.employeeCode}|${slugifyProjectName(row.projectName)}`
-    excelByEmpProject.set(k, row)
+    const existing = excelByEmployee.get(row.employeeCode)
+    if (existing) {
+      existing.regular += row.regularHours
+      existing.overtime += row.overtimeHours
+      existing.doubleTime += row.doubleTimeHours
+    } else {
+      excelByEmployee.set(row.employeeCode, {
+        regular: row.regularHours,
+        overtime: row.overtimeHours,
+        doubleTime: row.doubleTimeHours,
+      })
+    }
   }
 
   // 1. unmatched-pdf flags
@@ -72,10 +90,17 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     sources: SourceLocation[]
   }
   const buckets = new Map<string, Bucket>()
+  // Total PDF hours per employee — for employee-level cross-check vs Excel.
+  const pdfEmployeeHours = new Map<string, number>()
 
   for (const pdf of parsedPdfs) {
     if (!empMap.has(pdf.employeeCode)) continue
     for (const entry of pdf.entries) {
+      pdfEmployeeHours.set(
+        pdf.employeeCode,
+        (pdfEmployeeHours.get(pdf.employeeCode) ?? 0) + entry.hoursTotal,
+      )
+
       const projectKey = resolveAllocationToProjectKey(entry.allocation, projectConfigs)
       if (!projectKey) {
         unresolved.add(entry.allocation)
@@ -102,26 +127,21 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     }
   }
 
-  // 3. Cross-check Excel monthly project totals vs PDF-derived sums
-  const pdfProjectTotals = new Map<string, number>()
-  for (const b of buckets.values()) {
-    const k = `${b.employeeCode}|${b.projectKey}`
-    pdfProjectTotals.set(k, (pdfProjectTotals.get(k) ?? 0) + b.hours)
-  }
-  for (const [, row] of excelByEmpProject) {
-    const cfg = Object.values(projectConfigs).find(
-      (c) => slugifyProjectName(c.displayName) === slugifyProjectName(row.projectName),
-    )
-    if (!cfg) continue
-    const pdfTotalKey = `${row.employeeCode}|${cfg.projectKey}`
-    const pdfTotal = pdfProjectTotals.get(pdfTotalKey) ?? 0
-    const excelTotal = row.regularHours + row.overtimeHours + row.doubleTimeHours
+  // 3. Cross-check Excel monthly totals vs PDF-derived sums at EMPLOYEE level.
+  // (Excel exports do not break out hours per project.)
+  for (const [code, totals] of excelByEmployee) {
+    if (!empMap.has(code)) continue // unmatched-employee handled elsewhere
+    if (!pdfCodes.has(code)) continue // missing-pdf already flagged
+    const pdfTotal = pdfEmployeeHours.get(code) ?? 0
+    const excelTotal = totals.regular + totals.overtime + totals.doubleTime
     if (Math.abs(pdfTotal - excelTotal) > HOURS_TOLERANCE) {
+      const emp = empMap.get(code)
+      const name = emp ? `${emp.firstName} ${emp.lastName}` : code
       warnings.push({
         severity: 'warn',
         code: 'excel-pdf-hours-mismatch',
-        message: `${row.employeeCode} on ${row.projectName}: Excel total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`,
-        context: { employeeCode: row.employeeCode, projectKey: cfg.projectKey, excelTotal, pdfTotal },
+        message: `${name} (${code}): Excel monthly total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`,
+        context: { employeeCode: code, excelTotal, pdfTotal },
       })
     }
   }

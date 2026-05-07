@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { slugifyProjectName, resolveAllocationToProjectKey } from './projectMatching'
-import type { ProjectConfig } from '@/persistence/schemas'
+import {
+  slugifyProjectName,
+  resolveAllocationToProjectKey,
+  buildEmployeeAllocationMap,
+} from './projectMatching'
+import type { ExcelRow, ProjectConfig } from '@/persistence/schemas'
 
 const cfg = (overrides: Partial<ProjectConfig> = {}): ProjectConfig => ({
   projectKey: 'project-acme',
@@ -30,5 +34,44 @@ describe('resolveAllocationToProjectKey', () => {
   })
   it('returns null when no match', () => {
     expect(resolveAllocationToProjectKey('UNKNOWN-XYZ', configs)).toBeNull()
+  })
+})
+
+describe('buildEmployeeAllocationMap', () => {
+  const row = (
+    code: string,
+    allocations: string[],
+    projectNames: string[] = [],
+  ): ExcelRow => ({
+    employeeCode: code,
+    projectNames,
+    allocations,
+    regularHours: 0,
+    overtimeHours: 0,
+    doubleTimeHours: 0,
+    dateUpdated: '2026-04-30',
+  })
+
+  it('returns the union of allocations per employee', () => {
+    const m = buildEmployeeAllocationMap([
+      row('2000', ['ACM-001', 'VTX-PLN']),
+      row('2001', ['CAL-SVC']),
+    ])
+    expect(m.get('2000')).toEqual(['ACM-001', 'VTX-PLN'])
+    expect(m.get('2001')).toEqual(['CAL-SVC'])
+  })
+
+  it('dedupes allocations across multiple rows for the same employee', () => {
+    const m = buildEmployeeAllocationMap([
+      row('2000', ['ACM-001', 'VTX-PLN']),
+      row('2000', ['VTX-PLN', 'CAL-SVC']),
+    ])
+    const list = m.get('2000') ?? []
+    expect(new Set(list)).toEqual(new Set(['ACM-001', 'VTX-PLN', 'CAL-SVC']))
+  })
+
+  it('handles employees with no allocations', () => {
+    const m = buildEmployeeAllocationMap([row('2000', [])])
+    expect(m.get('2000')).toEqual([])
   })
 })

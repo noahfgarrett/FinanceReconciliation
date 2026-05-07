@@ -24,16 +24,20 @@ export function resolveAllocationToProjectKey(
 }
 
 /**
- * Build (employeeCode, projectKey) → projectName map from Excel rows
- * using the project's `laborAllocationDetails` as the authoritative alias.
+ * Build employeeCode → list of allocation codes the employee touched, taken
+ * as the union of every Excel row's `allocations` array for that employee.
+ * Used to surface which allocation codes still need to be mapped to projects.
  */
-export function buildExcelAllocationMap(
+export function buildEmployeeAllocationMap(
   rows: ExcelRow[],
-): Map<string, { projectName: string; allocation: string }> {
-  const m = new Map<string, { projectName: string; allocation: string }>()
+): Map<string, string[]> {
+  const m = new Map<string, Set<string>>()
   for (const r of rows) {
-    const key = `${r.employeeCode}|${slugifyProjectName(r.projectName)}`
-    if (!m.has(key)) m.set(key, { projectName: r.projectName, allocation: r.laborAllocationDetails })
+    const set = m.get(r.employeeCode) ?? new Set<string>()
+    for (const a of r.allocations) set.add(a)
+    m.set(r.employeeCode, set)
   }
-  return m
+  const out = new Map<string, string[]>()
+  for (const [k, v] of m) out.set(k, [...v])
+  return out
 }
