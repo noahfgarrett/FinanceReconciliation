@@ -1,4 +1,4 @@
-import { pdfjs } from './pdfjsConfig'
+import { pdfjs as defaultPdfjs } from './pdfjsConfig'
 import type {
   ParsedPdf, PdfTimesheetEntry, RowFlag, SourceLocation,
 } from '@/persistence/schemas'
@@ -9,6 +9,26 @@ export interface PdfParseResult {
   warnings: RowFlag[]
   /** Original PDF bytes (clone of the input buffer) for offline source viewing. */
   pdfBytes: ArrayBuffer | null
+}
+
+/**
+ * Minimal subset of the pdfjs-dist runtime that parsePdf actually exercises.
+ * Declared here so that integration tests in Node can swap in the
+ * `pdfjs-dist/legacy/build/pdf.mjs` bundle (which ships a Node-friendly
+ * worker) without dragging the full pdfjs type surface into our public API.
+ *
+ * Items are typed as `unknown` and structurally narrowed at the use site —
+ * different pdfjs builds (main, legacy) declare slightly different item
+ * unions (e.g. TextMarkedContent in the main build) and we only need a
+ * couple of shared fields.
+ */
+export interface PdfjsLike {
+  getDocument: (params: { data: ArrayBuffer }) => { promise: Promise<{
+    numPages: number
+    getPage: (p: number) => Promise<{
+      getTextContent: () => Promise<{ items: unknown[] }>
+    }>
+  }> }
 }
 
 interface TextItem {
@@ -133,18 +153,32 @@ function groupIntoLines(items: TextItem[]): TextLine[] {
 /** Extract all text items + page count from a PDF document buffer. */
 async function extractTextItems(
   buffer: ArrayBuffer,
+  pdfjs: PdfjsLike,
 ): Promise<{ items: TextItem[]; pageCount: number }> {
   const doc = await pdfjs.getDocument({ data: buffer }).promise
   const items: TextItem[] = []
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p)
     const tc = await page.getTextContent()
-    for (const it of tc.items as Array<{
-      str: string
-      transform: number[]
-      width?: number
-      height?: number
-    }>) {
+    for (const raw of tc.items) {
+      // Defensive narrowing: pdfjs unions TextItem with TextMarkedContent
+      // (which has no str/transform). Skip anything that doesn't carry the
+      // fields we actually use.
+      if (typeof raw !== 'object' || raw === null) continue
+      const candidate = raw as {
+        str?: unknown
+        transform?: unknown
+        width?: unknown
+        height?: unknown
+      }
+      if (typeof candidate.str !== 'string') continue
+      if (!Array.isArray(candidate.transform)) continue
+      const it = {
+        str: candidate.str,
+        transform: candidate.transform as number[],
+        width: typeof candidate.width === 'number' ? candidate.width : undefined,
+        height: typeof candidate.height === 'number' ? candidate.height : undefined,
+      }
       if (!it.str) continue
       // Use provided width if available, else estimate from x-scale × char count.
       const width = typeof it.width === 'number' && it.width > 0
@@ -448,7 +482,11 @@ function inferPeriodFromEntries(entries: PdfTimesheetEntry[]): { start: string; 
   return { start: dates[0], end: dates[dates.length - 1] }
 }
 
-export async function parsePdf(buffer: ArrayBuffer, fileName?: string): Promise<PdfParseResult> {
+export async function parsePdf(
+  buffer: ArrayBuffer,
+  fileName?: string,
+  pdfjsLib: PdfjsLike = defaultPdfjs,
+): Promise<PdfParseResult> {
   const warnings: RowFlag[] = []
   const fileLabel = fileName ?? 'unknown.pdf'
 
@@ -460,7 +498,7 @@ export async function parsePdf(buffer: ArrayBuffer, fileName?: string): Promise<
 
   let extractRes: { items: TextItem[]; pageCount: number }
   try {
-    extractRes = await extractTextItems(pdfjsBuffer)
+    extractRes = await extractTextItems(pdfjsBuffer, pdfjsLib)
   } catch (err) {
     return {
       parsed: null,
