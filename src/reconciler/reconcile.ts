@@ -19,7 +19,10 @@ export interface ReconcileOutput {
 }
 
 const HOURS_TOLERANCE = 0.1
-const HIGH_OT_RATIO = 2.0
+// Flag a (employee × project × week) row when its TOTAL hours exceed this
+// fraction of the project's OT threshold. 1.3 catches a 55-hr week on a
+// 40-hr-threshold project (1.375×) without flagging routine 50-hr OT weeks.
+const HIGH_OT_RATIO = 1.3
 
 export function reconcile(input: ReconcileInput): ReconcileOutput {
   const { employees, excelRows, parsedPdfs, projectConfigs } = input
@@ -153,11 +156,12 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     const split = splitWeekHours(b.hours, cfg)
     const rates = resolveRates(cfg, b.employeeCode)
     const flags: RowFlag[] = []
-    if (split.otHrs > cfg.otThresholdHrs * (HIGH_OT_RATIO - 1)) {
+    if (b.hours > cfg.otThresholdHrs * HIGH_OT_RATIO) {
+      const pct = Math.round((b.hours / cfg.otThresholdHrs) * 100)
       flags.push({
         severity: 'info',
         code: 'high-ot-anomaly',
-        message: `OT ${split.otHrs.toFixed(1)}hr exceeds 200% of threshold (${cfg.otThresholdHrs}hr)`,
+        message: `Weekly hours ${b.hours.toFixed(1)} are ${pct}% of project threshold (${cfg.otThresholdHrs}hr/wk)`,
       })
     }
     billing.push({
