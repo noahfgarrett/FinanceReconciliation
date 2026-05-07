@@ -39,7 +39,21 @@ export async function runPdfsInWorker(
       }
       w.onerror = (err) => {
         w.terminate()
-        rejectP(err.error instanceof Error ? err.error : new Error(err.message ?? 'PDF worker failed'))
+        // Surface as much detail as the browser gives us — the generic
+        // "PDF worker failed" string was hiding the actual root cause.
+        const detail = [
+          err.message,
+          err.filename ? `at ${err.filename}` : null,
+          err.lineno ? `line ${err.lineno}` : null,
+          err.error instanceof Error ? err.error.message : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        rejectP(
+          err.error instanceof Error
+            ? err.error
+            : new Error(`PDF worker failed${detail ? `: ${detail}` : ''}`),
+        )
       }
       w.postMessage({ buffer, fileName: file.name }, [buffer])
     })
