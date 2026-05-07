@@ -128,7 +128,7 @@ describe('parsePdf', () => {
     expect(result.warnings[0].message).toContain('employee header')
   })
 
-  it('emits confidence=1.0 + a non-zero source bbox for a clean entry', async () => {
+  it('emits high confidence + a non-zero source bbox for a clean entry', async () => {
     mockPdfjsConfig([buildTimesheetPage()])
     const { parsePdf } = await import('./pdfParser')
 
@@ -136,8 +136,9 @@ describe('parsePdf', () => {
 
     expect(result.parsed).not.toBeNull()
     const first = result.parsed!.entries[0]
-    expect(first.confidence).toBe(1)
-    expect(first.confidenceReasons).toEqual([])
+    // Synthetic page has no $-anchor, so the parser falls back to the
+    // last-numeric heuristic and emits a small confidence penalty.
+    expect(first.confidence).toBeGreaterThanOrEqual(0.9)
     expect(first.source).toBeDefined()
     expect(first.source!.pageIndex).toBe(1)
     expect(first.source!.width).toBeGreaterThan(0)
@@ -165,6 +166,78 @@ describe('parsePdf', () => {
     const e = result.parsed!.entries[0]
     expect(e.confidence).toBeLessThan(1)
     expect(e.confidenceReasons.some((r) => r.includes('outside typical'))).toBe(true)
+  })
+
+  it('derives a 7-day week from "Week Ending: MM/DD/YYYY"', async () => {
+    const page: FakeTextItem[] = [
+      makeItem('Employee: Noah Garrett 2000', 50, 750),
+      makeItem('Week Ending: 04/11/2026', 50, 730),
+      makeItem('04/06/2026', 50, 700),
+      makeItem('REG', 120, 700),
+      makeItem('ACM-001', 200, 700),
+      makeItem('$170.00', 380, 700),
+      makeItem('4.0', 460, 700),
+      makeItem('10.5', 520, 700),
+    ]
+    mockPdfjsConfig([page])
+    const { parsePdf } = await import('./pdfParser')
+
+    const result = await parsePdf(new ArrayBuffer(8))
+    expect(result.parsed).not.toBeNull()
+    // 7-day week ending 04/11 starts 04/05 (= 04/11 minus 6 days)
+    expect(result.parsed!.payPeriodStart).toBe('2026-04-05')
+    expect(result.parsed!.payPeriodEnd).toBe('2026-04-11')
+  })
+
+  it('picks the per-row hours value (first after $-anchor), not per-day rollup', async () => {
+    // Row layout: date REG IN OUT alloc tax — comment $dollars perRow perDayRollup
+    // The 4.5 (per-row) sits BEFORE the 10.5 (per-day rollup); both pass the
+    // 0.1–24 check. The parser should pick 4.5 because it appears FIRST after
+    // the dollars column.
+    const page: FakeTextItem[] = [
+      makeItem('Employee: Noah Garrett 2000', 50, 750),
+      makeItem('Week Ending: 04/11/2026', 50, 730),
+      makeItem('04/06/2026', 50, 700),
+      makeItem('REG', 100, 700),
+      makeItem('FAB52-MEP-001', 200, 700),
+      makeItem('$191.25', 380, 700),
+      makeItem('4.5', 460, 700),  // per-row total — what we want
+      makeItem('10.5', 520, 700), // per-day rollup — should be ignored
+    ]
+    mockPdfjsConfig([page])
+    const { parsePdf } = await import('./pdfParser')
+
+    const result = await parsePdf(new ArrayBuffer(8))
+    expect(result.parsed).not.toBeNull()
+    expect(result.parsed!.entries).toHaveLength(1)
+    expect(result.parsed!.entries[0].hoursTotal).toBe(4.5)
+  })
+
+  it('skips the "TOTAL:" summary row even when it contains numeric tokens', async () => {
+    const page: FakeTextItem[] = [
+      makeItem('Employee: Noah Garrett 2000', 50, 750),
+      makeItem('Week Ending: 04/11/2026', 50, 730),
+      // Real entry
+      makeItem('04/06/2026', 50, 700),
+      makeItem('REG', 100, 700),
+      makeItem('FAB52-MEP-001', 200, 700),
+      makeItem('$191.25', 380, 700),
+      makeItem('4.5', 460, 700),
+      // TOTAL: summary row — also includes a date-shaped looking value, but
+      // the parser must skip the entire line because of the TOTAL: marker.
+      makeItem('TOTAL:', 300, 600),
+      makeItem('$2,401.25', 380, 600),
+      makeItem('51.0', 460, 600),
+      makeItem('51.0', 520, 600),
+    ]
+    mockPdfjsConfig([page])
+    const { parsePdf } = await import('./pdfParser')
+
+    const result = await parsePdf(new ArrayBuffer(8))
+    expect(result.parsed).not.toBeNull()
+    // Only the real entry should be picked up, not the TOTAL row.
+    expect(result.parsed!.entries).toHaveLength(1)
+    expect(result.parsed!.entries[0].hoursTotal).toBe(4.5)
   })
 
   it('skips lines with date-only (no allocation, no hours) without crashing', async () => {

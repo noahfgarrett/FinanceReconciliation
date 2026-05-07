@@ -36,9 +36,11 @@ const HEADER_RE =
 const HEADER_FALLBACK_RE = /Employee:?\s*([A-Za-z' -]+?)\s+(\d{3,5})\b/
 
 // Date range in header: "04/06/2026 - 04/19/2026", "Period: ...", etc.
+// Also single "Week Ending: MM/DD/YYYY" — derives a 7-day week ending on that date.
 const PERIOD_RES: RegExp[] = [
   /(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:[-–—]|to)\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/,
   /Period:?\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s*[-–—]\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
+  /Week\s+Ending:?\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
 ]
 
 // Date token: 1/1/2026 or 01/01/26
@@ -182,14 +184,29 @@ function findEmployeeHeader(rawText: string): {
   return null
 }
 
+function isoMinusDays(iso: string, days: number): string {
+  if (!iso) return ''
+  const d = new Date(iso + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toISOString().slice(0, 10)
+}
+
 function findPayPeriod(rawText: string): { start: string; end: string } | null {
   for (const re of PERIOD_RES) {
     const m = re.exec(rawText)
-    if (m) {
+    if (!m) continue
+    // Two-date range form
+    if (m[2]) {
       const start = mmddyyyyToIso(m[1])
       const end = mmddyyyyToIso(m[2])
       if (start && end) return { start, end }
+      continue
     }
+    // Single-date "Week Ending" form → 7-day week ending on that date
+    const end = mmddyyyyToIso(m[1])
+    if (!end) continue
+    const start = isoMinusDays(end, 6)
+    return { start, end }
   }
   return null
 }
@@ -250,8 +267,13 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
   const entries: PdfTimesheetEntry[] = []
 
   for (const line of lines) {
-    const { tokens } = lineToParsed(line)
+    const { tokens, rawText } = lineToParsed(line)
     if (tokens.length < 3) continue
+
+    // Skip the "TOTAL:" summary row that ends each weekly timesheet table.
+    // Defensive: even if a date pattern accidentally matched in $-amounts, we
+    // never want this line treated as an entry.
+    if (/TOTAL:/i.test(rawText)) continue
 
     const dateToken = tokens.find((t) => isLikelyDate(t))
     if (!dateToken) continue
@@ -267,15 +289,57 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
 
     if (!allocToken && bareCandidates.length === 0) continue
 
-    const hoursTokens = tokens.filter((t) => {
-      if (!HOURS_RE.test(t)) return false
-      const n = parseFloat(t)
-      return n >= 0.1 && n <= 24
-    })
-    if (hoursTokens.length === 0) continue
+    // Weekly Paycom timesheets have two hours columns: per-row Total Hrs.
+    // and per-day Total Hrs./Day. The dollars column ($amount) sits between
+    // the comments and the hours columns, so the FIRST hours-like number
+    // appearing AFTER the $-anchor is the per-row total. The last (when
+    // present and ≠ first) is the per-day rollup we want to ignore.
+    const dollarsIdx = tokens.findIndex((t) => /^\$/.test(t))
 
-    const hoursStr = hoursTokens[hoursTokens.length - 1]
-    const hoursTotal = parseFloat(hoursStr)
+    interface HoursPick {
+      str: string
+      val: number
+    }
+
+    function hoursCandidate(t: string): HoursPick | null {
+      if (!HOURS_RE.test(t)) return null
+      const n = parseFloat(t)
+      if (!(n >= 0.1 && n <= 24)) return null
+      return { str: t, val: n }
+    }
+
+    let hoursPick: HoursPick | null = null
+    let pickedFromDollarAnchor = false
+    let totalHoursCandidates = 0
+
+    if (dollarsIdx >= 0) {
+      for (let i = dollarsIdx + 1; i < tokens.length; i++) {
+        const c = hoursCandidate(tokens[i])
+        if (!c) continue
+        totalHoursCandidates++
+        if (!hoursPick) hoursPick = c
+      }
+      if (hoursPick) pickedFromDollarAnchor = true
+    }
+
+    // Fallback (no $-anchor visible): use the LAST hours-like token in the
+    // line. This preserves prior behavior for synthetic or non-Paycom layouts.
+    if (!hoursPick) {
+      let last: HoursPick | null = null
+      for (const t of tokens) {
+        const c = hoursCandidate(t)
+        if (c) {
+          last = c
+          totalHoursCandidates++
+        }
+      }
+      hoursPick = last
+    }
+
+    if (!hoursPick) continue
+
+    const hoursStr = hoursPick.str
+    const hoursTotal = hoursPick.val
 
     const finalAlloc = allocToken ?? bareCandidates[0]
 
@@ -301,7 +365,7 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
       confidence -= 0.15
       reasons.push('allocation looks like a pay code')
     }
-    if (hoursTokens.length === 1) {
+    if (totalHoursCandidates === 1) {
       confidence -= 0.05
     }
     if (hoursTotal < 0.5 || hoursTotal > 16) {
@@ -311,6 +375,10 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
     if (allocCandidates.length > 1) {
       confidence -= 0.10
       reasons.push('multiple allocation candidates on same line')
+    }
+    if (!pickedFromDollarAnchor && dollarsIdx === -1) {
+      confidence -= 0.05
+      reasons.push('no $-anchor for hours pick')
     }
 
     confidence = clamp01(confidence)
