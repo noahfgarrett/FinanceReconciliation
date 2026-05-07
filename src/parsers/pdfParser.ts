@@ -312,9 +312,18 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
     const dateToken = tokens.find((t) => isLikelyDate(t))
     if (!dateToken) continue
 
-    // Find the canonical allocation token (separator-bearing)
-    const allocCandidates = tokens.filter((t) => isAllocCode(t))
+    // Find the canonical allocation token (separator-bearing).
+    // When multiple candidates exist on a line, prefer the one with the most
+    // separator characters — this naturally promotes real allocation codes
+    // like `FAB52-MEP-001` (2 seps) over tax-profile codes like `OH-NRES`
+    // (1 sep) without hard-coding any specific format.
+    const sepCount = (s: string): number => (s.match(/[-_./]/g) ?? []).length
+    const allocCandidates = tokens
+      .filter((t) => isAllocCode(t))
+      .sort((a, b) => sepCount(b) - sepCount(a))
     const allocToken = allocCandidates[0]
+    const topSepCount = allocToken ? sepCount(allocToken) : 0
+    const tiedAtTopCount = allocCandidates.filter((t) => sepCount(t) === topSepCount).length
 
     // Bare candidates that look like project/pay codes without a separator
     const bareCandidates = tokens.filter(
@@ -338,7 +347,10 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
     function hoursCandidate(t: string): HoursPick | null {
       if (!HOURS_RE.test(t)) return null
       const n = parseFloat(t)
-      if (!(n >= 0.1 && n <= 24)) return null
+      // Accept any non-negative value < 100. Out-of-range values (>24 or
+      // <0.1) are kept and flagged via confidence scoring rather than
+      // silently dropped — finance still needs to SEE the bad row to vet it.
+      if (!(n >= 0 && n < 100)) return null
       return { str: t, val: n }
     }
 
@@ -402,11 +414,20 @@ function extractEntries(lines: TextLine[]): EntryExtractionResult {
     if (totalHoursCandidates === 1) {
       confidence -= 0.05
     }
-    if (hoursTotal < 0.5 || hoursTotal > 16) {
+    if (hoursTotal > 24) {
+      confidence -= 0.55
+      reasons.push(`impossible hours value (${hoursTotal} > 24)`)
+    } else if (hoursTotal < 0.1) {
+      confidence -= 0.40
+      reasons.push(`implausibly low hours value (${hoursTotal})`)
+    } else if (hoursTotal < 0.5 || hoursTotal > 16) {
       confidence -= 0.20
       reasons.push('hours outside typical 0.5–16 range')
     }
-    if (allocCandidates.length > 1) {
+    if (tiedAtTopCount > 1) {
+      // Two or more allocation tokens with equal separator count — genuine
+      // ambiguity worth flagging. (A tax-profile-vs-real-alloc situation has
+      // unequal separator counts and lands here as 1, no penalty.)
       confidence -= 0.10
       reasons.push('multiple allocation candidates on same line')
     }

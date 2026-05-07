@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.1',
+    date: '2026-05-07T13:00:00Z',
+    type: 'fix',
+    notes: `### Heuristic tuning
+- **Out-of-range hours now surface**: a 25-hour day or a 0.05-hour entry used to be silently dropped from parsing. They're kept and flagged at parse time with a strong red-dot confidence penalty so finance can vet them.
+- **Real PDFs hit 100% confidence**: tax-profile codes like \`OH-NRES\` no longer compete with real allocation codes like \`FAB52-MEP-001\` for the multi-alloc penalty. When alloc candidates have unequal separator counts, the richer one wins outright.
+- **High-OT anomaly fires earlier**: weeks exceeding 130% of the project's threshold now flag (e.g. 55 hours on a 40-hr-threshold project). Was previously calibrated for 200%, which almost never tripped.`,
+  },
+  {
     version: '1.2.0',
     date: '2026-05-07T16:00:00Z',
     type: 'major',
