@@ -46,8 +46,10 @@ export function generateSampleData(): SampleData {
     const entries: PdfTimesheetEntry[] = []
     const weeklyTotals: Record<string, number> = {}
 
-    // Per-employee per-project monthly accumulators for ExcelRow
-    const monthlyByProject: Record<number, { reg: number; ot: number }> = {}
+    // Per-employee monthly totals (across ALL projects), to mirror the real
+    // Excel shape (one row per employee with monthly hours summed).
+    let monthlyReg = 0
+    let monthlyOt = 0
 
     for (const ws of weekStarts) {
       // Generate weekly hours per project
@@ -75,26 +77,22 @@ export function generateSampleData(): SampleData {
         weeklyTotals[ws] = (weeklyTotals[ws] ?? 0) + hoursThisWeek
         const splitOt = hoursThisWeek > project.threshold ? hoursThisWeek - project.threshold : 0
         const splitReg = hoursThisWeek - splitOt
-        monthlyByProject[pi] = monthlyByProject[pi] ?? { reg: 0, ot: 0 }
-        monthlyByProject[pi].reg += splitReg
-        monthlyByProject[pi].ot += splitOt
+        monthlyReg += splitReg
+        monthlyOt += splitOt
       }
     }
 
-    // Emit ExcelRow per (employee × project) for the month
-    for (const piStr of Object.keys(monthlyByProject)) {
-      const pi = Number(piStr)
-      const totals = monthlyByProject[pi]
-      excelRows.push({
-        employeeCode: e.code,
-        laborAllocationDetails: PROJECTS[pi].allocation,
-        projectName: PROJECTS[pi].name,
-        regularHours: round2(totals.reg),
-        overtimeHours: round2(totals.ot),
-        doubleTimeHours: 0,
-        dateUpdated: '2026-04-30',
-      })
-    }
+    // Emit a SINGLE ExcelRow per employee with combined project lists,
+    // matching the real Paycom export (semicolon-separated cells).
+    excelRows.push({
+      employeeCode: e.code,
+      projectNames: projectIdxs.map((pi) => PROJECTS[pi].name),
+      allocations: projectIdxs.map((pi) => PROJECTS[pi].allocation),
+      regularHours: round2(monthlyReg),
+      overtimeHours: round2(monthlyOt),
+      doubleTimeHours: 0,
+      dateUpdated: '2026-04-30',
+    })
 
     // Two biweekly PDFs per employee
     const half = entries.length / 2

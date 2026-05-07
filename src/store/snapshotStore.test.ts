@@ -16,10 +16,24 @@ beforeEach(async () => {
 
 describe('snapshotStore.importBatch', () => {
   it('creates a draft snapshot from synthetic inputs and computes billing', async () => {
+    // Pre-seed a project config with an alias for 'ACM' so the PDF allocation
+    // resolves. (The new bootstrap does NOT auto-populate aliases from Excel.)
+    await useSnapshotStore.getState().upsertProjectConfig({
+      projectKey: 'project-acme',
+      displayName: 'Project Acme',
+      allocationAliases: ['ACM'],
+      otThresholdHrs: 40,
+      includeDoubleTime: false,
+      defaultRegularRate: 100,
+      employeeRateOverrides: {},
+    })
+
     await useSnapshotStore.getState().importBatch({
       employees: [{ code: '2000', firstName: 'X', lastName: 'Y' }],
       excelRows: [{
-        employeeCode: '2000', laborAllocationDetails: 'ACM', projectName: 'Project Acme',
+        employeeCode: '2000',
+        projectNames: ['Project Acme'],
+        allocations: ['ACM'],
         regularHours: 50, overtimeHours: 0, doubleTimeHours: 0, dateUpdated: '2026-04-30',
       }],
       parsedPdfs: [{
@@ -49,7 +63,9 @@ describe('snapshotStore.importBatch', () => {
     await useSnapshotStore.getState().importBatch({
       employees: [{ code: '2000', firstName: 'X', lastName: 'Y' }],
       excelRows: [{
-        employeeCode: '2000', laborAllocationDetails: 'ACM', projectName: 'P',
+        employeeCode: '2000',
+        projectNames: ['P'],
+        allocations: ['ACM'],
         regularHours: 30, overtimeHours: 0, doubleTimeHours: 0, dateUpdated: '2026-04-30',
       }],
       parsedPdfs: [],
