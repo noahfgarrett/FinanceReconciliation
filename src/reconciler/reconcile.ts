@@ -23,6 +23,10 @@ const HOURS_TOLERANCE = 0.1
 // fraction of the project's OT threshold. 1.3 catches a 55-hr week on a
 // 40-hr-threshold project (1.375×) without flagging routine 50-hr OT weeks.
 const HIGH_OT_RATIO = 1.3
+// A "full month" of timesheets is roughly 4 ISO weeks. When PDFs for a given
+// employee cover fewer than this, an Excel/PDF total mismatch is expected
+// (partial coverage) and is reported as info rather than warn.
+const PARTIAL_COVERAGE_WEEKS = 4
 
 export function reconcile(input: ReconcileInput): ReconcileOutput {
   const { employees, excelRows, parsedPdfs, projectConfigs } = input
@@ -66,17 +70,29 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       })
     }
   }
-  // missing-pdf flags
+  // missing-pdf flags — collapse to a single info-level summary when more
+  // than one employee has Excel rows but no imported PDFs (partial coverage).
   const pdfCodes = new Set(parsedPdfs.map((p) => p.employeeCode))
+  const missingPdfEmployees: string[] = []
   for (const e of employees) {
     if (!pdfCodes.has(e.code)) {
-      warnings.push({
-        severity: 'warn',
-        code: 'missing-pdf',
-        message: `No PDF found for ${e.firstName} ${e.lastName} (${e.code})`,
-        context: { employeeCode: e.code },
-      })
+      missingPdfEmployees.push(`${e.firstName} ${e.lastName} (${e.code})`)
     }
+  }
+  if (missingPdfEmployees.length === 1) {
+    warnings.push({
+      severity: 'warn',
+      code: 'missing-pdf',
+      message: `No PDF found for ${missingPdfEmployees[0]}`,
+      context: { employees: missingPdfEmployees },
+    })
+  } else if (missingPdfEmployees.length >= 2) {
+    warnings.push({
+      severity: 'info',
+      code: 'missing-pdf',
+      message: `${missingPdfEmployees.length} employees have Excel rows but no PDFs imported (partial coverage). Drop more PDFs to fill in the rest.`,
+      context: { count: missingPdfEmployees.length, employees: missingPdfEmployees },
+    })
   }
 
   // 2. Build (employee, project, week) totals from PDF entries.
@@ -95,6 +111,8 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
   const buckets = new Map<string, Bucket>()
   // Total PDF hours per employee — for employee-level cross-check vs Excel.
   const pdfEmployeeHours = new Map<string, number>()
+  // Distinct ISO weeks covered per employee — used to detect partial coverage.
+  const weeksByEmployee = new Map<string, Set<string>>()
 
   for (const pdf of parsedPdfs) {
     if (!empMap.has(pdf.employeeCode)) continue
@@ -103,6 +121,9 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
         pdf.employeeCode,
         (pdfEmployeeHours.get(pdf.employeeCode) ?? 0) + entry.hoursTotal,
       )
+      const set = weeksByEmployee.get(pdf.employeeCode) ?? new Set<string>()
+      set.add(entry.weekStart)
+      weeksByEmployee.set(pdf.employeeCode, set)
 
       const projectKey = resolveAllocationToProjectKey(entry.allocation, projectConfigs)
       if (!projectKey) {
@@ -140,11 +161,15 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     if (Math.abs(pdfTotal - excelTotal) > HOURS_TOLERANCE) {
       const emp = empMap.get(code)
       const name = emp ? `${emp.firstName} ${emp.lastName}` : code
+      const weeksCovered = weeksByEmployee.get(code)?.size ?? 0
+      const partial = weeksCovered < PARTIAL_COVERAGE_WEEKS
       warnings.push({
-        severity: 'warn',
+        severity: partial ? 'info' : 'warn',
         code: 'excel-pdf-hours-mismatch',
-        message: `${name} (${code}): Excel monthly total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`,
-        context: { employeeCode: code, excelTotal, pdfTotal },
+        message: partial
+          ? `${name} (${code}): partial PDF coverage (${weeksCovered} weeks) — Excel total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`
+          : `${name} (${code}): Excel monthly total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`,
+        context: { employeeCode: code, excelTotal, pdfTotal, weeksCovered, partial },
       })
     }
   }

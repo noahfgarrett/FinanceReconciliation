@@ -113,7 +113,7 @@ export function ProjectMappingModal(): React.JSX.Element | null {
       title="Unmapped Allocation Codes"
       width="lg"
     >
-      <div className="px-5 py-4 flex flex-col gap-4">
+      <div data-testid="project-mapping-modal" className="px-5 py-4 flex flex-col gap-4">
         <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2.5">
           <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-300">

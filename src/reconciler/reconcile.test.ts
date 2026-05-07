@@ -90,7 +90,7 @@ describe('reconcile', () => {
 
   it('flags excel-vs-pdf mismatches at the EMPLOYEE level (sum across PDFs)', () => {
     // Excel says employee 2000 has 30 reg + 0 OT + 0 DT = 30 hr for the month.
-    // PDFs together show only 25 hr → mismatch.
+    // PDFs together show only 25 hr → mismatch (partial coverage = info).
     const out = reconcile({
       employees: [emp('2000')],
       excelRows: [excel('2000', ['Project Acme'], 30)],
@@ -98,6 +98,40 @@ describe('reconcile', () => {
       projectConfigs: { 'project-acme': cfg() },
     })
     expect(out.warnings.some((w) => w.code === 'excel-pdf-hours-mismatch')).toBe(true)
+  })
+
+  it('downgrades hours mismatch to info when PDF coverage is partial (<4 weeks)', () => {
+    const out = reconcile({
+      employees: [emp('2000')],
+      excelRows: [excel('2000', ['Project Acme'], 100)],
+      parsedPdfs: [
+        pdf('2000', '2026-04-06', 'ACM', 25),
+        pdf('2000', '2026-04-13', 'ACM', 25),
+      ],
+      projectConfigs: { 'project-acme': cfg() },
+    })
+    const w = out.warnings.find((w) => w.code === 'excel-pdf-hours-mismatch')
+    expect(w).toBeDefined()
+    expect(w?.severity).toBe('info')
+    expect(w?.message).toMatch(/partial PDF coverage/)
+  })
+
+  it('keeps hours mismatch at warn when PDF coverage is full (>=4 weeks)', () => {
+    const out = reconcile({
+      employees: [emp('2000')],
+      excelRows: [excel('2000', ['Project Acme'], 200)],
+      parsedPdfs: [
+        pdf('2000', '2026-04-06', 'ACM', 25),
+        pdf('2000', '2026-04-13', 'ACM', 25),
+        pdf('2000', '2026-04-20', 'ACM', 25),
+        pdf('2000', '2026-04-27', 'ACM', 25),
+      ],
+      projectConfigs: { 'project-acme': cfg() },
+    })
+    const w = out.warnings.find((w) => w.code === 'excel-pdf-hours-mismatch')
+    expect(w).toBeDefined()
+    expect(w?.severity).toBe('warn')
+    expect(w?.message).not.toMatch(/partial PDF coverage/)
   })
 
   it('does NOT flag mismatch when summed PDF hours match Excel monthly total', () => {
@@ -155,13 +189,37 @@ describe('reconcile', () => {
     expect(r.sources).toHaveLength(2)
   })
 
-  it('flags missing PDF', () => {
+  it('flags a single missing PDF as warn with the employee name', () => {
     const out = reconcile({
       employees: [emp('2000'), emp('3000')],
       excelRows: [excel('2000', ['Project Acme'], 30), excel('3000', ['Project Acme'], 20)],
       parsedPdfs: [pdf('2000', '2026-04-06', 'ACM', 30)],
       projectConfigs: { 'project-acme': cfg() },
     })
-    expect(out.warnings.some((w) => w.code === 'missing-pdf')).toBe(true)
+    const flags = out.warnings.filter((w) => w.code === 'missing-pdf')
+    expect(flags).toHaveLength(1)
+    expect(flags[0].severity).toBe('warn')
+    expect(flags[0].message).toContain('3000')
+  })
+
+  it('collapses 2+ missing PDFs into a single info-level summary', () => {
+    const out = reconcile({
+      employees: [emp('2000'), emp('3000'), emp('4000'), emp('5000')],
+      excelRows: [
+        excel('2000', ['Project Acme'], 30),
+        excel('3000', ['Project Acme'], 20),
+        excel('4000', ['Project Acme'], 20),
+        excel('5000', ['Project Acme'], 20),
+      ],
+      parsedPdfs: [pdf('2000', '2026-04-06', 'ACM', 30)],
+      projectConfigs: { 'project-acme': cfg() },
+    })
+    const flags = out.warnings.filter((w) => w.code === 'missing-pdf')
+    expect(flags).toHaveLength(1)
+    expect(flags[0].severity).toBe('info')
+    expect(flags[0].message).toMatch(/3 employees/)
+    const ctx = flags[0].context as { count: number; employees: string[] } | undefined
+    expect(ctx?.count).toBe(3)
+    expect(ctx?.employees).toHaveLength(3)
   })
 })
