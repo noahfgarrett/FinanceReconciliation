@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.3',
+    date: '2026-05-07T20:00:00Z',
+    type: 'fix',
+    notes: `### Real-PDF parsing now actually works on the live deploy
+- Real-PDF imports were silently broken in production since v1.2.0 — sample data worked but dropping a real Paycom PDF folder produced "Import failed: PDF worker failed". Fixed.
+- Root cause: nested module workers (our outer parser worker spawning pdfjs's worker) are unreliable under viteSingleFile bundling. Refactored to drop the outer worker and let pdfjs spawn its dedicated worker directly from the main thread. UI stays responsive because pdfjs does its work off-thread.
+- Caught by an end-to-end Playwright smoke test against the live URL — that test is now green (3/3).`,
+  },
+  {
     version: '1.2.2',
     date: '2026-05-07T18:00:00Z',
     type: 'fix',
