@@ -68,6 +68,17 @@ function parseString(val: unknown): string {
   return String(val).trim()
 }
 
+/** Split a "; "-separated cell into a list of trimmed, non-empty values.
+ *  Newlines are treated as separators too — Paycom exports occasionally
+ *  break long cells onto multiple lines. */
+function splitMulti(s: string | undefined): string[] {
+  if (!s) return []
+  return s
+    .split(/[;\n]/)
+    .map((x) => x.trim())
+    .filter((x) => x.length > 0)
+}
+
 /** Scan the first `maxRows` rows of a sheet and return the row index that
  *  matches the most EXCEL_COLUMNS patterns. Returns -1 if nothing found. */
 function findHeaderRow(sheet: XLSX.WorkSheet, maxRows: number): number {
@@ -192,23 +203,13 @@ export function parseExcel(buffer: ArrayBuffer): ExcelParseResult {
     const doubleTimeHours = parseHours(cell('doubleTimeHours'))
     const dateUpdated = parseIsoDate(cell('dateUpdated'))
     const wwid = parseString(cell('wwid'))
-    const laborAllocationDetails = parseString(cell('laborAllocationDetails'))
-    const projectName = parseString(cell('projectName'))
-
-    if (!projectName) {
-      warnings.push({
-        severity: 'warn',
-        code: 'parse-failure',
-        message: `Row ${r + 1}: employee "${employeeCode}" has no project name — row skipped.`,
-        context: { row: r + 1, employeeCode },
-      })
-      continue
-    }
+    const allocations = splitMulti(parseString(cell('laborAllocationDetails')))
+    const projectNames = splitMulti(parseString(cell('projectName')))
 
     rows.push({
       employeeCode,
-      laborAllocationDetails,
-      projectName,
+      projectNames,
+      allocations,
       regularHours,
       overtimeHours,
       doubleTimeHours,

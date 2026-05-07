@@ -44,7 +44,7 @@ describe('matchHeaders', () => {
 
 describe('missingRequiredColumns', () => {
   it('returns empty array when all required cols present', () => {
-    const map = { employeeCode: 0, firstName: 1, lastName: 2, regularHours: 3, projectName: 4 }
+    const map = { employeeCode: 0, firstName: 1, lastName: 2, regularHours: 3 }
     expect(missingRequiredColumns(map)).toHaveLength(0)
   })
 
@@ -53,6 +53,5 @@ describe('missingRequiredColumns', () => {
     const missing = missingRequiredColumns(map)
     expect(missing).toContain('lastName')
     expect(missing).toContain('regularHours')
-    expect(missing).toContain('projectName')
   })
 })
