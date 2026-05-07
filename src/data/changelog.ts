@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.0',
+    date: '2026-05-07T16:00:00Z',
+    type: 'major',
+    notes: `### Real-data parser alignment
+- **Excel parser** now correctly handles semicolon-separated project + allocation lists in single cells (each row = one employee's monthly summary).
+- **PDF parser** recognizes "Week Ending: MM/DD/YYYY" headers (weekly Paycom timesheets), and now picks the per-row hours value rather than the per-day rollup.
+- **Reconciler** cross-checks Excel ↔ PDF totals at the employee-month level (not per-project), since Excel exports don't include per-project breakdowns.
+- "TOTAL:" summary lines in PDFs are now skipped during entry extraction.`,
+  },
+  {
     version: '1.1.0',
     date: '2026-05-06T18:00:00Z',
     type: 'feature',
