@@ -72,11 +72,17 @@ shopt -u nullglob
 # `new URL('./pdf.worker.min.mjs', import.meta.url)` inside the bundled
 # pdfjsConfig resolves correctly in production. Without this, real-PDF
 # parsing 404s once the outer worker tries to spawn pdfjs.
-if [ -f node_modules/pdfjs-dist/build/pdf.worker.min.mjs ]; then
-  cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs "$DEPLOY_DIR/"
-  echo "  Copied pdfjs worker (pdf.worker.min.mjs)"
+PDFJS_COPIED=0
+for fname in pdf.worker.min.mjs pdf.worker.mjs; do
+  if [ -f "node_modules/pdfjs-dist/build/$fname" ]; then
+    cp "node_modules/pdfjs-dist/build/$fname" "$DEPLOY_DIR/"
+    PDFJS_COPIED=$((PDFJS_COPIED + 1))
+  fi
+done
+if (( PDFJS_COPIED > 0 )); then
+  echo "  Copied $PDFJS_COPIED pdfjs worker file(s) (.min.mjs + .mjs)"
 else
-  echo "  WARNING: pdfjs-dist worker file not found — real-PDF parsing will fail" >&2
+  echo "  WARNING: pdfjs-dist worker files not found — real-PDF parsing will fail" >&2
 fi
 
 echo "==> Deploying to gh-pages branch..."
