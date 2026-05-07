@@ -33,6 +33,9 @@ Thumbs.db
 # Deploy temp
 .gh-pages-temp/
 
+# Local-only integration tests that depend on user-supplied fixtures
+test/integration/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

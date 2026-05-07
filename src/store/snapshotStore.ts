@@ -55,25 +55,28 @@ function bootstrapProjectsFromExcel(
   existing: Record<string, ProjectConfig>,
 ): Record<string, ProjectConfig> {
   const out = { ...existing }
+  // Union of all project names across all employees → one project config each.
+  // We do NOT pre-populate `allocationAliases` from Excel: the Excel export
+  // doesn't tell us which allocation belongs to which project. The user maps
+  // each allocation the first time it appears via the Project Mapping Modal.
+  const allProjectNames = new Set<string>()
   for (const r of excelRows) {
-    const key = slugifyProjectName(r.projectName)
+    for (const p of r.projectNames) {
+      const trimmed = p.trim()
+      if (trimmed) allProjectNames.add(trimmed)
+    }
+  }
+  for (const name of allProjectNames) {
+    const key = slugifyProjectName(name)
     if (!out[key]) {
       out[key] = {
         projectKey: key,
-        displayName: r.projectName,
-        allocationAliases: r.laborAllocationDetails ? [r.laborAllocationDetails] : [],
+        displayName: name,
+        allocationAliases: [],
         otThresholdHrs: 40,
         includeDoubleTime: false,
         defaultRegularRate: 0,
         employeeRateOverrides: {},
-      }
-    } else if (
-      r.laborAllocationDetails &&
-      !out[key].allocationAliases.includes(r.laborAllocationDetails)
-    ) {
-      out[key] = {
-        ...out[key],
-        allocationAliases: [...out[key].allocationAliases, r.laborAllocationDetails],
       }
     }
   }
