@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.2',
+    date: '2026-05-07T18:00:00Z',
+    type: 'fix',
+    notes: `### Quieter import warnings under partial coverage
+- **\`missing-pdf\`** warnings now collapse into a single info-level summary when more than one employee in the Excel has no PDF imported — was previously one warning per employee, drowning out genuine issues.
+- **\`excel-pdf-hours-mismatch\`** is downgraded to info severity when the PDF set covers fewer weeks than the Excel month — partial-coverage mismatches are expected, not anomalous.`,
+  },
+  {
     version: '1.2.1',
     date: '2026-05-07T13:00:00Z',
     type: 'fix',

@@ -123,6 +123,7 @@ export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: P
         {/* hidden inputs */}
         <input
           ref={excelRef}
+          data-testid="excel-input"
           type="file"
           accept=".xlsx"
           className="hidden"
@@ -134,6 +135,7 @@ export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: P
         />
         <input
           ref={folderRef}
+          data-testid="pdf-folder-input"
           type="file"
           // @ts-expect-error webkitdirectory is non-standard
           webkitdirectory=""
