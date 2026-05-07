@@ -18,7 +18,7 @@ export const EXCEL_COLUMNS: ColumnSpec[] = [
   { key: 'projectName', patterns: ['projectnamedescdelete', 'projectname', 'projectdescription', 'project'] },
 ]
 
-const REQUIRED_COLUMNS = new Set(['employeeCode', 'firstName', 'lastName', 'regularHours', 'projectName'])
+const REQUIRED_COLUMNS = new Set(['employeeCode', 'firstName', 'lastName', 'regularHours'])
 
 /**
  * Given a header row, produce a map of column key → column index.

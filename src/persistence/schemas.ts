@@ -110,8 +110,13 @@ export type Employee = z.infer<typeof EmployeeSchema>
 
 export const ExcelRowSchema = z.object({
   employeeCode: z.string(),
-  laborAllocationDetails: z.string(),
-  projectName: z.string(),
+  // Arrays of names + alloc codes parsed from semicolon-separated cells.
+  // The Excel export delivers ONE row per employee with monthly totals; the
+  // project / allocation cells contain "; "-separated lists of every project
+  // / allocation code the employee touched in the period.
+  projectNames: z.array(z.string()).default([]),
+  allocations: z.array(z.string()).default([]),
+  // Hours are MONTHLY at the employee level (not per-project).
   regularHours: z.number(),
   overtimeHours: z.number(),
   doubleTimeHours: z.number(),

@@ -44,12 +44,54 @@ describe('parseExcel', () => {
       employeeCode: '2001',
       regularHours: 40,
       overtimeHours: 5,
-      projectName: 'Acme Phase 2',
-      laborAllocationDetails: 'ACM-001',
+      projectNames: ['Acme Phase 2'],
+      allocations: ['ACM-001'],
     })
     expect(result.employees[0]).toMatchObject({
       code: '2001', firstName: 'Alice', lastName: 'Smith', wwid: 'W001',
     })
+  })
+
+  it('splits semicolon-separated project + allocation lists into arrays', () => {
+    const data = [
+      SPEC_HEADERS,
+      specRow(
+        '2000', 'Noah', 'Garrett', 160, 47, 0, '2026-05-02', 'W002000',
+        'ADMIN-OFC-001; CARDINAL-CX-002; FAB52-MEP-001; FAB52-UTL-003; TRAIN-SAF-001',
+        'Fab 52 Buildout — Arizona; Internal Admin — Non-Billable; Internal Training — Non-Billable; Project Cardinal — Intel Ohio Fab',
+      ),
+    ]
+    const result = parseExcel(makeWorkbook(data))
+    expect(result.warnings).toHaveLength(0)
+    expect(result.rows).toHaveLength(1)
+    const row = result.rows[0]
+    expect(row.allocations).toEqual([
+      'ADMIN-OFC-001',
+      'CARDINAL-CX-002',
+      'FAB52-MEP-001',
+      'FAB52-UTL-003',
+      'TRAIN-SAF-001',
+    ])
+    expect(row.projectNames).toEqual([
+      'Fab 52 Buildout — Arizona',
+      'Internal Admin — Non-Billable',
+      'Internal Training — Non-Billable',
+      'Project Cardinal — Intel Ohio Fab',
+    ])
+    expect(row.regularHours).toBe(160)
+    expect(row.overtimeHours).toBe(47)
+  })
+
+  it('handles empty project / allocation cells without warning', () => {
+    const data = [
+      SPEC_HEADERS,
+      specRow('2010', 'Quiet', 'Worker', 40, 0, 0, '2026-04-30', '', '', ''),
+    ]
+    const result = parseExcel(makeWorkbook(data))
+    expect(result.warnings).toHaveLength(0)
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].projectNames).toEqual([])
+    expect(result.rows[0].allocations).toEqual([])
   })
 
   it('header on row 2 (rows 0+1 are blank/intro) — parser scans and finds it', () => {
@@ -66,7 +108,7 @@ describe('parseExcel', () => {
   })
 
   it('missing required column → parse-failure warning, no rows', () => {
-    // Omit 'Regular Hours' and 'Project Name'
+    // Omit 'Regular Hours' (still a required column)
     const data = [
       ['Employee Code', 'Legal Firstname', 'Legal Lastname', 'Date (Updated)'],
       ['4001', 'Eve', 'White', '2026-04-30'],
@@ -80,7 +122,6 @@ describe('parseExcel', () => {
   })
 
   it('hours stored as strings with commas — coerced correctly', () => {
-    // We need to insert string values, not numbers; build the sheet manually
     const ws = XLSX.utils.aoa_to_sheet([
       SPEC_HEADERS,
       ['5001', 'Frank', 'Hall', '1,234.5', '100.0', '0', '2026-04-30', '', 'ACM-001', 'Acme Phase 2'],
@@ -95,12 +136,9 @@ describe('parseExcel', () => {
   })
 
   it('Excel serial date in dateUpdated → ISO string', () => {
-    // Serial 46946 = 2028-06-17 (example); use a known one: 44946 = 2023-01-01
-    // Actually let's use 45017 = 2023-04-27
     const SERIAL = 45017
     const data = [SPEC_HEADERS, specRow('6001', 'Grace', 'Kim', 40, 0, 0, SERIAL as unknown as string, '', 'ACM-001', 'Acme')]
     const result = parseExcel(makeWorkbook(data))
-    // Should produce a valid ISO date string
     expect(result.rows[0].dateUpdated).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
