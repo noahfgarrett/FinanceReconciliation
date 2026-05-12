@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { ChevronRight, ChevronDown, Users } from 'lucide-react'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
@@ -163,9 +163,8 @@ export function ByEmployeeView({
             const isOpen = expanded.has(agg.code)
             const subRows = subRowsByEmployee.get(agg.code) ?? []
             return (
-              <>
+              <Fragment key={agg.code}>
                 <tr
-                  key={agg.code}
                   className="border-b border-slate-900/60 last:border-0 hover:bg-slate-900/40 cursor-pointer select-none"
                   onClick={() => toggleExpand(agg.code)}
                 >
@@ -247,7 +246,7 @@ export function ByEmployeeView({
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             )
           })}
         </tbody>

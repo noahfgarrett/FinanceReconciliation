@@ -16,6 +16,7 @@ describe('buildExportBundle', () => {
         employeeRateOverrides: {},
       },
     },
+    employees: {},
     snapshots: [],
   }
 
@@ -63,6 +64,7 @@ describe('buildExportBundle', () => {
       parsedPdfs: [pdf],
       projectConfigsAtSave: {},
       clientsAtSave: {},
+      employeesAtSave: {},
       weeklyBilling: [],
       warnings: [],
       auditLog: [],

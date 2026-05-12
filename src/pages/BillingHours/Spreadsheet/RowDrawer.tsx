@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ScanSearch } from 'lucide-react'
 import type {
   WeeklyBilling, ProjectConfig, Employee, ParsedPdfWithBytes,
@@ -95,7 +96,7 @@ export function RowDrawer({
     : undefined
   const confidencePct = Math.round((row.confidence ?? 1) * 100)
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -265,7 +266,8 @@ export function RowDrawer({
         highlights={row.sources ?? []}
         fileName={sourcePdfName}
       />
-    </>
+    </>,
+    document.body,
   )
 }
 

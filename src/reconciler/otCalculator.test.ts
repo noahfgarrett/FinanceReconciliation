@@ -34,12 +34,14 @@ describe('splitWeekHours', () => {
 })
 
 describe('resolveRates', () => {
-  it('uses 1.5× / 2× by default', () => {
-    expect(resolveRates(base, 'X')).toEqual({ regular: 100, ot: 150, dt: 200 })
+  it('uses 1.5× / 2× by default with project-default source', () => {
+    const rates = resolveRates(base, 'X')
+    expect(rates).toEqual({ regular: 100, ot: 150, dt: 200, source: 'project-default' })
   })
   it('respects project overrides', () => {
-    expect(resolveRates({ ...base, otRateOverride: 175, dtRateOverride: 220 }, 'X')).toEqual({
-      regular: 100, ot: 175, dt: 220,
+    const rates = resolveRates({ ...base, otRateOverride: 175, dtRateOverride: 220 }, 'X')
+    expect(rates).toEqual({
+      regular: 100, ot: 175, dt: 220, source: 'project-default',
     })
   })
   it('respects employee overrides', () => {
@@ -50,5 +52,6 @@ describe('resolveRates', () => {
     expect(resolveRates(cfg, '2000').regular).toBe(250)
     expect(resolveRates(cfg, '2000').ot).toBe(400)
     expect(resolveRates(cfg, '2000').dt).toBe(200) // falls through to project default
+    expect(resolveRates(cfg, '2000').source).toBe('employee-override')
   })
 })

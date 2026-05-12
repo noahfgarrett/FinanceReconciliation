@@ -1,13 +1,14 @@
 import { openDB, type IDBPDatabase } from 'idb'
 
 const DB_NAME = 'reconciler'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 interface DbSchema {
   kv: { key: string; value: unknown }
   snapshots: { key: string; value: unknown; indexes: { 'by-period': string } }
   configs: { key: string; value: unknown }
   clients: { key: string; value: unknown }
+  employees: { key: string; value: unknown }
 }
 
 let dbPromise: Promise<IDBPDatabase<DbSchema>> | null = null
@@ -23,6 +24,7 @@ function getDb(): Promise<IDBPDatabase<DbSchema>> {
           const store = db.createObjectStore('snapshots')
           store.createIndex('by-period', 'periodLabel')
         }
+        if (!db.objectStoreNames.contains('employees')) db.createObjectStore('employees')
       },
     })
   }
@@ -44,13 +46,13 @@ export async function kvDelete(key: string): Promise<void> {
   await db.delete('kv', key)
 }
 
-export async function getAll<T>(store: 'configs' | 'clients' | 'snapshots'): Promise<T[]> {
+export async function getAll<T>(store: 'configs' | 'clients' | 'snapshots' | 'employees'): Promise<T[]> {
   const db = await getDb()
   return (await db.getAll(store)) as T[]
 }
 
 export async function putRecord(
-  store: 'configs' | 'clients' | 'snapshots',
+  store: 'configs' | 'clients' | 'snapshots' | 'employees',
   key: string,
   value: unknown,
 ): Promise<void> {
@@ -59,7 +61,7 @@ export async function putRecord(
 }
 
 export async function deleteRecord(
-  store: 'configs' | 'clients' | 'snapshots',
+  store: 'configs' | 'clients' | 'snapshots' | 'employees',
   key: string,
 ): Promise<void> {
   const db = await getDb()
@@ -73,6 +75,7 @@ export async function clearAll(): Promise<void> {
     db.clear('configs'),
     db.clear('clients'),
     db.clear('snapshots'),
+    db.clear('employees'),
   ])
 }
 

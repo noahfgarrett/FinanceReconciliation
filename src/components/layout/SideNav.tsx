@@ -2,6 +2,7 @@ import {
   BarChart3,
   GitCompareArrows,
   Boxes,
+  Users,
   Download,
   History,
   Settings,
@@ -23,6 +24,7 @@ const ITEMS: NavItem[] = [
   { id: 'billing-hours', label: 'Billing Hours', icon: BarChart3, group: 'Workspace' },
   { id: 'reconcile', label: 'Reconcile', icon: GitCompareArrows, group: 'Workspace' },
   { id: 'projects', label: 'Projects', icon: Boxes, group: 'Configuration' },
+  { id: 'employees', label: 'Employees', icon: Users, group: 'Configuration' },
   { id: 'exports', label: 'Exports', icon: Download, group: 'Output' },
   { id: 'history', label: 'Snapshots', icon: History, group: 'History' },
 ]

@@ -73,6 +73,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       enableSorting: false,
       enableColumnFilter: false,
       size: 80,
+      minSize: 50,
     },
 
     // Confidence dot — rendered specially in SpreadsheetView
@@ -80,12 +81,11 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       id: 'confidence',
       header: 'Conf',
       accessorKey: 'confidence',
-      // Cell content is rendered specially in SpreadsheetView; provide a value
-      // here so sorting works.
       cell: (info) => info.row.original.confidence,
       enableSorting: true,
       meta: { align: 'left' },
       size: 60,
+      minSize: 40,
     },
 
     // Employee
@@ -100,6 +100,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       },
       meta: { selectOptions: employeeOptions },
       size: 200,
+      minSize: 100,
     },
 
     // Project
@@ -110,6 +111,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => configs[info.row.original.projectKey]?.displayName ?? info.row.original.projectKey,
       meta: { selectOptions: projectOptions },
       size: 180,
+      minSize: 80,
     },
 
     // Week
@@ -119,6 +121,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       accessorKey: 'weekStart',
       cell: (info) => fmtWeek(info.row.original.weekStart),
       size: 90,
+      minSize: 60,
     },
 
     // Hours (total)
@@ -129,6 +132,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => fmtHours(info.row.original.hours),
       meta: { numeric: true, align: 'right' },
       size: 90,
+      minSize: 60,
     },
 
     // Regular hours
@@ -139,6 +143,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => fmtHours(info.row.original.regularHrs),
       meta: { numeric: true, align: 'right', dim: true },
       size: 90,
+      minSize: 60,
     },
 
     // OT hours
@@ -149,6 +154,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => fmtHours(info.row.original.otHrs),
       meta: { numeric: true, align: 'right' },
       size: 90,
+      minSize: 60,
     },
 
     // Regular dollars
@@ -159,6 +165,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => fmtUsd(info.row.original.regularDollars),
       meta: { numeric: true, align: 'right' },
       size: 100,
+      minSize: 60,
     },
 
     // OT dollars
@@ -169,6 +176,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       cell: (info) => fmtUsd(info.row.original.otDollars),
       meta: { numeric: true, align: 'right' },
       size: 100,
+      minSize: 60,
     },
 
     // Total $
@@ -182,6 +190,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       },
       meta: { numeric: true, align: 'right' },
       size: 110,
+      minSize: 70,
     },
 
     // Notes (inline editable)
@@ -198,6 +207,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       }),
       enableSorting: false,
       size: 200,
+      minSize: 80,
     },
 
     // Reviewed checkbox
@@ -213,6 +223,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
         locked,
       }),
       size: 90,
+      minSize: 60,
       meta: { align: 'right' },
     },
   ]

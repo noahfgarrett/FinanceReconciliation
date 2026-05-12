@@ -4,12 +4,14 @@ import type {
 } from '@/persistence/schemas'
 import { resolveAllocationToProjectKey } from './projectMatching'
 import { splitWeekHours, resolveRates } from './otCalculator'
+import type { EmployeeProfileForRates } from './otCalculator'
 
 export interface ReconcileInput {
   employees: Employee[]
   excelRows: ExcelRow[]
   parsedPdfs: ParsedPdf[]
   projectConfigs: Record<string, ProjectConfig>
+  employeeProfiles?: Record<string, EmployeeProfileForRates>
 }
 
 export interface ReconcileOutput {
@@ -179,7 +181,8 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     const cfg = projectConfigs[b.projectKey]
     if (!cfg) continue
     const split = splitWeekHours(b.hours, cfg)
-    const rates = resolveRates(cfg, b.employeeCode)
+    const empProfile = input.employeeProfiles?.[b.employeeCode]
+    const rates = resolveRates(cfg, b.employeeCode, empProfile)
     const flags: RowFlag[] = []
     if (b.hours > cfg.otThresholdHrs * HIGH_OT_RATIO) {
       const pct = Math.round((b.hours / cfg.otThresholdHrs) * 100)
@@ -189,6 +192,43 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
         message: `Weekly hours ${b.hours.toFixed(1)} are ${pct}% of project threshold (${cfg.otThresholdHrs}hr/wk)`,
       })
     }
+
+    // Rate-based warning flags
+    if (rates.source === 'none') {
+      flags.push({
+        severity: 'error',
+        code: 'no-bill-rate',
+        message: `No bill rate found for employee ${b.employeeCode} on project ${b.projectKey}`,
+      })
+    }
+    if (rates.source === 'project-default') {
+      flags.push({
+        severity: 'info',
+        code: 'using-project-default',
+        message: `Using project default rate ($${rates.regular}/hr) for employee ${b.employeeCode}`,
+      })
+    }
+    if (rates.source === 'employee-override' && empProfile) {
+      const maxRate = Math.max(empProfile.defaultBillRate, rates.regular)
+      if (maxRate > 0) {
+        const deviation = Math.abs(empProfile.defaultBillRate - rates.regular) / maxRate
+        if (deviation > 0.2) {
+          flags.push({
+            severity: 'warn',
+            code: 'rate-mismatch',
+            message: `Employee default rate ($${empProfile.defaultBillRate}/hr) differs from project override ($${rates.regular}/hr) by ${Math.round(deviation * 100)}%`,
+          })
+        }
+      }
+    }
+    if (rates.regular === 0 && rates.source !== 'none') {
+      flags.push({
+        severity: 'warn',
+        code: 'zero-rate',
+        message: `Bill rate resolved to $0/hr for employee ${b.employeeCode} on project ${b.projectKey}`,
+      })
+    }
+
     billing.push({
       employeeCode: b.employeeCode,
       projectKey: b.projectKey,

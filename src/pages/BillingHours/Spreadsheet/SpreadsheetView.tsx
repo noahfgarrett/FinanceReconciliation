@@ -361,7 +361,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
         <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
           <thead className="sticky top-0 z-10 bg-slate-950">
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
+              <tr key={hg.id} className="group/header">
                 {hg.headers.map((header) => {
                   const align = header.column.columnDef.meta?.align
                   const isSorted = header.column.getIsSorted()
@@ -382,10 +382,17 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                       {isSorted === 'desc' && ' ↓'}
                       {header.column.getCanResize() && (
                         <div
-                          onMouseDown={header.getResizeHandler()}
+                          onMouseDown={(e) => {
+                            e.stopPropagation()
+                            header.getResizeHandler()(e)
+                          }}
                           onTouchStart={header.getResizeHandler()}
-                          className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 hover:opacity-100 bg-lw-orange-500/50"
-                        />
+                          onClick={(e) => e.stopPropagation()}
+                          onDoubleClick={(e) => e.stopPropagation()}
+                          className="absolute -right-1 top-0 h-full w-3 cursor-col-resize group/resize z-[1]"
+                        >
+                          <div className="absolute right-[5px] top-1/4 h-1/2 w-px bg-slate-600 opacity-0 group-hover/header:opacity-60 group-hover/resize:opacity-100 group-hover/resize:bg-lw-orange-500 transition-all" />
+                        </div>
                       )}
                     </th>
                   )

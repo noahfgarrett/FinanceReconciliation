@@ -6,7 +6,6 @@ import {
   Download,
   History,
   Settings,
-  Sparkles,
   BookmarkPlus,
   Sun,
   ScrollText,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react'
 import { useUiStore } from '@/store/uiStore'
 import { useSnapshotStore } from '@/store/snapshotStore'
-import { generateSampleData } from '@/lib/sampleData'
 
 interface Command {
   id: string
@@ -38,8 +36,6 @@ function useCommands(): Command[] {
   const theme = useUiStore((s) => s.theme)
   const setTriggerSaveSnapshot = useUiStore((s) => s.setTriggerSaveSnapshot)
 
-  const importBatch = useSnapshotStore((s) => s.importBatch)
-  const addRecentImport = useSnapshotStore((s) => s.addRecentImport)
   const current = useSnapshotStore((s) => s.current)
 
   function go(page: Parameters<typeof setActivePage>[0]): void {
@@ -89,17 +85,6 @@ function useCommands(): Command[] {
       category: 'Navigate',
       icon: Settings,
       action: () => go('settings'),
-    },
-    {
-      id: 'load-sample',
-      label: 'Load Sample Data',
-      category: 'Data',
-      icon: Sparkles,
-      action: () => {
-        setShowCommandPalette(false)
-        const data = generateSampleData()
-        void importBatch(data).then(() => void addRecentImport({ folderName: 'Sample Data' }))
-      },
     },
     {
       id: 'save-snapshot',

@@ -1,15 +1,14 @@
 import { useRef, useState, type DragEvent } from 'react'
-import { FolderUp, FileSpreadsheet, Sparkles, FileText, ArrowRight } from 'lucide-react'
+import { FolderUp, FileSpreadsheet, FileText, ArrowRight } from 'lucide-react'
 
 interface Props {
   onExcel?: (file: File) => void
   onPdfFolder?: (files: File[]) => void
-  onLoadSample?: () => void
   busy?: boolean
   status?: string
 }
 
-export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: Props) {
+export function DropZone({ onExcel, onPdfFolder, busy, status }: Props) {
   const [hover, setHover] = useState(false)
   const excelRef = useRef<HTMLInputElement>(null)
   const folderRef = useRef<HTMLInputElement>(null)
@@ -97,20 +96,6 @@ export function DropZone({ onExcel, onPdfFolder, onLoadSample, busy, status }: P
               <FolderUp className="w-4 h-4 text-lw-orange-400" /> Choose Folder
             </button>
           </div>
-
-          {/* tertiary "load sample" option, below the fold */}
-          {onLoadSample && (
-            <div className="mt-6 pt-6 border-t border-slate-800/80">
-              <button
-                onClick={onLoadSample}
-                className="group inline-flex items-center gap-2 text-sm text-slate-400 hover:text-lw-orange-300 transition-colors"
-              >
-                <Sparkles className="w-4 h-4 text-lw-orange-400 group-hover:rotate-12 transition-transform duration-300 ease-out-back" />
-                <span>Or explore with sample data</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-              </button>
-            </div>
-          )}
 
           {status && (
             <div className="mt-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">

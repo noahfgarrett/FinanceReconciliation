@@ -8,6 +8,7 @@ const PAGES: Record<PageId, LazyExoticComponent<ComponentType>> = {
   'billing-hours': lazy(() => import('@/pages/BillingHours/BillingHoursPage')),
   reconcile: lazy(() => import('@/pages/Reconcile/ReconcilePage')),
   projects: lazy(() => import('@/pages/Projects/ProjectsPage')),
+  employees: lazy(() => import('@/pages/Employees/EmployeesPage')),
   exports: lazy(() => import('@/pages/Exports/ExportsPage')),
   history: lazy(() => import('@/pages/History/HistoryPage')),
   settings: lazy(() => import('@/pages/Settings/SettingsPage')),

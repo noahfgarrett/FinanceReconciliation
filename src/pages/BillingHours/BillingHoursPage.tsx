@@ -11,9 +11,8 @@ import { SaveSnapshotModal } from './SaveSnapshotModal'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { useUiStore } from '@/store/uiStore'
 import { Button } from '@/components/ui/Button'
-import { BookmarkPlus, Trash2, Clock, Sparkles } from 'lucide-react'
+import { BookmarkPlus, Trash2, Clock } from 'lucide-react'
 import { kvGet, kvSet } from '@/persistence/idb'
-import { generateSampleData } from '@/lib/sampleData'
 import { relativeTime } from '@/lib/relativeTime'
 
 type TabId = 'by-project' | 'by-employee' | 'by-week' | 'spreadsheet'
@@ -37,9 +36,6 @@ export default function BillingHoursPage() {
   const configs = useSnapshotStore((s) => s.projectConfigs)
   const clearCurrent = useSnapshotStore((s) => s.clearCurrent)
   const recentImports = useSnapshotStore((s) => s.recentImports)
-  const importBatch = useSnapshotStore((s) => s.importBatch)
-  const addRecentImport = useSnapshotStore((s) => s.addRecentImport)
-
   const triggerSaveSnapshot = useUiStore((s) => s.triggerSaveSnapshot)
   const setTriggerSaveSnapshot = useUiStore((s) => s.setTriggerSaveSnapshot)
 
@@ -77,7 +73,7 @@ export default function BillingHoursPage() {
         subtitle={
           snap
             ? `${snap.periodLabel} · ${snap.employees.length} employees · ${Object.keys(configs).length} projects`
-            : 'Drop your monthly Excel + PDF folder, or load sample data to explore'
+            : 'Drop your monthly Excel + PDF folder to get started'
         }
         decoration={!snap ? <div className="absolute inset-0 bg-hero-glow" /> : undefined}
         actions={
@@ -121,28 +117,13 @@ export default function BillingHoursPage() {
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-md bg-lw-orange-500/10 border border-lw-orange-500/20 flex items-center justify-center">
-                        <Sparkles className="w-3.5 h-3.5 text-lw-orange-400 group-hover:rotate-12 transition-transform duration-300" />
+                        <Clock className="w-3.5 h-3.5 text-lw-orange-400" />
                       </div>
                       <span className="text-sm text-slate-200 font-medium">
                         {entry.folderName ?? entry.excelName ?? 'Unknown import'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500 tabular-nums">{relativeTime(entry.ts)}</span>
-                      {entry.folderName === 'Sample Data' && (
-                        <button
-                          className="text-xs font-medium text-lw-orange-400 hover:text-lw-orange-300 transition-colors px-2 py-1 rounded-md hover:bg-lw-orange-500/10"
-                          onClick={() => {
-                            const data = generateSampleData()
-                            void importBatch(data).then(() =>
-                              addRecentImport({ folderName: 'Sample Data' }),
-                            )
-                          }}
-                        >
-                          Reload
-                        </button>
-                      )}
-                    </div>
+                    <span className="text-xs text-slate-500 tabular-nums">{relativeTime(entry.ts)}</span>
                   </div>
                 ))}
               </div>
