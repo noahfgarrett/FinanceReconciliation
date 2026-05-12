@@ -1,9 +1,20 @@
-import { useState } from 'react'
-import { ChevronRight, FolderOpen } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { ChevronRight, Download, FileDown, FolderOpen, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { ConflictReviewModal } from '@/components/ConflictReviewModal'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import type { ProjectConfig } from '@/persistence/schemas'
+import {
+  exportProjectsCsv,
+  parseProjectsCsv,
+  generateProjectCsvTemplate,
+  downloadCsv,
+} from '@/lib/csvImportExport'
+import { detectProjectConflicts } from '@/lib/conflictDetection'
+import type { ConflictRecord, ResolvedConflict } from '@/lib/conflictDetection'
+import { resolveProjectConflicts } from '@/lib/conflictResolver'
 import { ProjectConfigDrawer } from './ProjectConfigDrawer'
 import { ClientsTab } from './ClientsTab'
 
@@ -17,9 +28,112 @@ const TABS: Array<{ id: TabId; label: string }> = [
 export default function ProjectsPage(): React.JSX.Element {
   const projectConfigs = useSnapshotStore((s) => s.projectConfigs)
   const clients = useSnapshotStore((s) => s.clients)
+  const upsertProjectConfig = useSnapshotStore((s) => s.upsertProjectConfig)
 
   const [activeTab, setActiveTab] = useState<TabId>('projects')
   const [selectedProject, setSelectedProject] = useState<ProjectConfig | null>(null)
+
+  // CSV import state
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  const [csvImportWarnings, setCsvImportWarnings] = useState<string[]>([])
+  const [csvImportSuccess, setCsvImportSuccess] = useState<string | null>(null)
+
+  // Conflict review state
+  const [pendingConflicts, setPendingConflicts] = useState<ConflictRecord[]>([])
+  const [pendingNewRecords, setPendingNewRecords] = useState<ProjectConfig[]>([])
+  const [pendingUnchangedCount, setPendingUnchangedCount] = useState(0)
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false)
+
+  const handleCsvImport = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      e.target.value = ''
+      setCsvImportWarnings([])
+      setCsvImportSuccess(null)
+
+      const text = await file.text()
+      const { records, warnings } = parseProjectsCsv(text)
+      setCsvImportWarnings(warnings)
+
+      if (records.length === 0) {
+        setCsvImportWarnings((prev) => [...prev, 'No valid project records found in CSV'])
+        return
+      }
+
+      const result = detectProjectConflicts(records, projectConfigs)
+
+      // Immediately import new records
+      for (const newCfg of result.newRecords) {
+        await upsertProjectConfig(newCfg)
+      }
+
+      if (result.conflicts.length > 0) {
+        // Show conflict review modal
+        setPendingConflicts(result.conflicts)
+        setPendingNewRecords(result.newRecords)
+        setPendingUnchangedCount(result.unchangedCount)
+        setIsConflictModalOpen(true)
+      } else {
+        // No conflicts — show success immediately
+        const parts: string[] = []
+        if (result.newRecords.length > 0) {
+          parts.push(`${result.newRecords.length} project${result.newRecords.length !== 1 ? 's' : ''} imported`)
+        }
+        if (result.unchangedCount > 0) {
+          parts.push(`${result.unchangedCount} unchanged`)
+        }
+        setCsvImportSuccess(parts.join(', ') || 'No changes detected')
+        setTimeout(() => setCsvImportSuccess(null), 5000)
+      }
+    },
+    [projectConfigs, upsertProjectConfig],
+  )
+
+  const handleConflictConfirm = useCallback(
+    async (resolved: ResolvedConflict[]): Promise<void> => {
+      const mergedConfigs = resolveProjectConflicts(resolved, projectConfigs)
+      for (const cfg of mergedConfigs) {
+        await upsertProjectConfig(cfg)
+      }
+      setIsConflictModalOpen(false)
+
+      const parts: string[] = []
+      if (pendingNewRecords.length > 0) {
+        parts.push(`${pendingNewRecords.length} imported`)
+      }
+      if (mergedConfigs.length > 0) {
+        parts.push(`${mergedConfigs.length} updated`)
+      }
+      if (pendingUnchangedCount > 0) {
+        parts.push(`${pendingUnchangedCount} unchanged`)
+      }
+      setCsvImportSuccess(parts.join(', '))
+      setTimeout(() => setCsvImportSuccess(null), 5000)
+
+      setPendingConflicts([])
+      setPendingNewRecords([])
+      setPendingUnchangedCount(0)
+    },
+    [projectConfigs, upsertProjectConfig, pendingNewRecords, pendingUnchangedCount],
+  )
+
+  const handleConflictClose = useCallback((): void => {
+    setIsConflictModalOpen(false)
+    setPendingConflicts([])
+    setPendingNewRecords([])
+    setPendingUnchangedCount(0)
+  }, [])
+
+  const handleCsvExport = useCallback((): void => {
+    const csv = exportProjectsCsv(projectConfigs)
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCsv(csv, `projects-${date}.csv`)
+  }, [projectConfigs])
+
+  const handleDownloadTemplate = useCallback((): void => {
+    downloadCsv(generateProjectCsvTemplate(), 'project-template.csv')
+  }, [])
 
   const projectList = Object.values(projectConfigs).sort((a, b) =>
     a.displayName.localeCompare(b.displayName),
@@ -57,6 +171,53 @@ export default function ProjectsPage(): React.JSX.Element {
       <div className="mt-4">
         {activeTab === 'projects' && (
           <div className="mx-8 mb-8">
+            {/* CSV toolbar */}
+            <div className="flex items-center gap-3 mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Upload className="w-3.5 h-3.5" />}
+                onClick={() => csvInputRef.current?.click()}
+              >
+                Import CSV
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Download className="w-3.5 h-3.5" />}
+                onClick={handleCsvExport}
+                disabled={projectList.length === 0}
+              >
+                Export CSV
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<FileDown className="w-3.5 h-3.5" />}
+                onClick={handleDownloadTemplate}
+              >
+                Template
+              </Button>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => void handleCsvImport(e)}
+              />
+            </div>
+
+            {/* CSV import feedback */}
+            {(csvImportSuccess || csvImportWarnings.length > 0) && (
+              <div className="mb-4 space-y-1">
+                {csvImportSuccess && (
+                  <p className="text-xs text-green-400">{csvImportSuccess}</p>
+                )}
+                {csvImportWarnings.map((w, i) => (
+                  <p key={i} className="text-xs text-amber-400">{w}</p>
+                ))}
+              </div>
+            )}
             {projectList.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-800 bg-[#0a0f1c]/40 flex flex-col items-center justify-center py-16 px-6 text-center gap-4 animate-fade-in">
                 <div className="relative">
@@ -70,8 +231,8 @@ export default function ProjectsPage(): React.JSX.Element {
                     No projects yet
                   </h3>
                   <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
-                    Import a monthly Excel + PDFs on the Billing Hours page, or load sample data
-                    to see configured projects appear here.
+                    Import a monthly Excel + PDFs on the Billing Hours page to see configured
+                    projects appear here.
                   </p>
                 </div>
               </div>
@@ -148,6 +309,16 @@ export default function ProjectsPage(): React.JSX.Element {
       <ProjectConfigDrawer
         config={selectedProject}
         onClose={() => setSelectedProject(null)}
+      />
+
+      <ConflictReviewModal
+        open={isConflictModalOpen}
+        onClose={handleConflictClose}
+        onConfirm={(resolved) => void handleConflictConfirm(resolved)}
+        title="Review Project Import"
+        conflicts={pendingConflicts}
+        unchangedCount={pendingUnchangedCount}
+        newCount={pendingNewRecords.length}
       />
     </div>
   )

@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useSnapshotStore } from '@/store/snapshotStore'
+import { useEmployeeStore } from '@/store/employeeStore'
 import { buildExportBundle, downloadJson, readJsonFile } from '@/persistence/jsonExport'
 import type { ExportBundle } from '@/persistence/schemas'
 import { generateInvoicePdf, downloadPdf } from '@/exports/invoicePdf'
@@ -159,6 +160,7 @@ export default function ExportsPage() {
   const clients = useSnapshotStore((s) => s.clients)
   const snapshots = useSnapshotStore((s) => s.snapshots)
   const importBundle = useSnapshotStore((s) => s.importBundle)
+  const employees = useEmployeeStore((s) => s.employees)
 
   // Invoice preview state
   const [previewData, setPreviewData] = useState<InvoiceData | null>(null)
@@ -248,11 +250,12 @@ export default function ExportsPage() {
 
   // ── JSON handlers ─────────────────────────────────────────────────────────
 
-  function handleExportJson(scope: 'all' | 'settings' | 'history'): void {
+  function handleExportJson(scope: 'all' | 'settings' | 'history' | 'setup'): void {
     const bundle = buildExportBundle({
       scope,
       clients,
       projectConfigs,
+      employees,
       snapshots,
     })
     const date = new Date().toISOString().slice(0, 10)
@@ -442,6 +445,14 @@ export default function ExportsPage() {
                   onClick={() => handleExportJson('history')}
                 >
                   Export History
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Download className="w-3.5 h-3.5" />}
+                  onClick={() => handleExportJson('setup')}
+                >
+                  Export Setup
                 </Button>
               </div>
             </div>

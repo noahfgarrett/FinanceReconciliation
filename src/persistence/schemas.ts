@@ -47,6 +47,10 @@ export const FlagSchema = z.object({
     'pdf-entry-missing-approval',
     'allocation-not-mapped',
     'parse-failure',
+    'no-bill-rate',
+    'using-project-default',
+    'rate-mismatch',
+    'zero-rate',
   ]),
   message: z.string(),
   context: z.record(z.unknown()).optional(),
@@ -107,6 +111,18 @@ export const EmployeeSchema = z.object({
   wwid: z.string().optional(),
 })
 export type Employee = z.infer<typeof EmployeeSchema>
+
+export const EmployeeProfileSchema = z.object({
+  code: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  defaultBillRate: z.number().nonnegative().default(0),
+  jobTitle: z.string().optional(),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+  lastModifiedAt: z.string(),
+})
+export type EmployeeProfile = z.infer<typeof EmployeeProfileSchema>
 
 export const ExcelRowSchema = z.object({
   employeeCode: z.string(),
@@ -170,6 +186,7 @@ export const SnapshotSchema = z.object({
   parsedPdfs: z.array(ParsedPdfSchema),
   projectConfigsAtSave: z.record(z.string(), ProjectConfigSchema),
   clientsAtSave: z.record(z.string(), ClientSchema),
+  employeesAtSave: z.record(z.string(), EmployeeProfileSchema).default({}),
   weeklyBilling: z.array(WeeklyBillingSchema),
   warnings: z.array(FlagSchema),
   auditLog: z.array(AuditEventSchema),
@@ -180,9 +197,10 @@ export const ExportBundleSchema = z.object({
   schemaVersion: z.literal(1),
   exportedAt: z.string(),
   appVersion: z.string(),
-  scope: z.enum(['all', 'settings', 'history']),
+  scope: z.enum(['all', 'settings', 'history', 'setup']),
   clients: z.record(z.string(), ClientSchema).optional(),
   projectConfigs: z.record(z.string(), ProjectConfigSchema).optional(),
+  employees: z.record(z.string(), EmployeeProfileSchema).optional(),
   snapshots: z.array(SnapshotSchema).optional(),
 })
 export type ExportBundle = z.infer<typeof ExportBundleSchema>

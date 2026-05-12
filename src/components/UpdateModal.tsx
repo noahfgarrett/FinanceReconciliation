@@ -210,7 +210,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
               </p>
             )}
 
-            <div className={showAll ? 'overflow-y-auto' : 'max-h-[400px] overflow-y-auto'}>
+            <div className={showAll ? 'max-h-[60vh] overflow-y-auto' : 'max-h-[400px] overflow-y-auto'}>
               <div className="space-y-2">
                 {visibleEntries.map((entry, index) => {
                   const isExpanded = expandedVersions.has(entry.version)

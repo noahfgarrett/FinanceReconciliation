@@ -2,6 +2,7 @@ export type PageId =
   | 'billing-hours'
   | 'reconcile'
   | 'projects'
+  | 'employees'
   | 'exports'
   | 'history'
   | 'settings'

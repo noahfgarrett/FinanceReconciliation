@@ -239,6 +239,13 @@ h1, h2, h3 {
 .light .bg-slate-900\/70,
 .light .bg-slate-900\/80 { background-color: rgba(255, 255, 255, 0.7); }
 
+/* Context-pill backgrounds (e.g. KeyboardHelp / Settings scope tags). The
+ * dark-only `bg-slate-800/70` was previously bleeding through in light mode
+ * as a near-black block, making the slate-500 label text unreadable. */
+.light .bg-slate-800\/70,
+.light .bg-slate-800\/60,
+.light .bg-slate-800\/50 { background-color: rgba(0, 0, 0, 0.05); }
+
 /* Borders */
 .dark .border-slate-800 { border-color: var(--border-default); }
 .dark .border-slate-700 { border-color: var(--border-emphasis); }

@@ -6,7 +6,7 @@ import type {
   ProjectConfig, Snapshot, AuditEvent,
 } from '@/persistence/schemas'
 import { getAll, putRecord, deleteRecord, kvGet, kvSet } from '@/persistence/idb'
-import { slugifyProjectName } from '@/reconciler/projectMatching'
+import { useEmployeeStore } from '@/store/employeeStore'
 
 const CURRENT_SNAPSHOT_ID = 'current-snapshot-id'
 const RECENT_IMPORTS_KEY = 'recent-imports'
@@ -50,39 +50,6 @@ interface SnapshotState {
   importBundle: (bundle: ExportBundle) => Promise<void>
 }
 
-function bootstrapProjectsFromExcel(
-  excelRows: ExcelRow[],
-  existing: Record<string, ProjectConfig>,
-): Record<string, ProjectConfig> {
-  const out = { ...existing }
-  // Union of all project names across all employees → one project config each.
-  // We do NOT pre-populate `allocationAliases` from Excel: the Excel export
-  // doesn't tell us which allocation belongs to which project. The user maps
-  // each allocation the first time it appears via the Project Mapping Modal.
-  const allProjectNames = new Set<string>()
-  for (const r of excelRows) {
-    for (const p of r.projectNames) {
-      const trimmed = p.trim()
-      if (trimmed) allProjectNames.add(trimmed)
-    }
-  }
-  for (const name of allProjectNames) {
-    const key = slugifyProjectName(name)
-    if (!out[key]) {
-      out[key] = {
-        projectKey: key,
-        displayName: name,
-        allocationAliases: [],
-        otThresholdHrs: 40,
-        includeDoubleTime: false,
-        defaultRegularRate: 0,
-        employeeRateOverrides: {},
-      }
-    }
-  }
-  return out
-}
-
 export const useSnapshotStore = create<SnapshotState>((set, get) => ({
   current: null,
   projectConfigs: {},
@@ -116,16 +83,17 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
   },
 
   importBatch: async ({ excelRows, employees, parsedPdfs, periodLabel }) => {
-    const updatedConfigs = bootstrapProjectsFromExcel(excelRows, get().projectConfigs)
-    for (const cfg of Object.values(updatedConfigs)) {
-      await putRecord('configs', cfg.projectKey, cfg)
-    }
-
+    // Project configs should already be set up (by the OnboardingWizard or
+    // prior configuration) before importBatch is called. We read the current
+    // store state directly instead of bootstrapping from Excel.
+    const currentConfigs = get().projectConfigs
+    const employeeProfiles = useEmployeeStore.getState().employees
     const out = reconcile({
       employees,
       excelRows,
       parsedPdfs,
-      projectConfigs: updatedConfigs,
+      projectConfigs: currentConfigs,
+      employeeProfiles,
     })
     const snap: Snapshot = {
       id: uuid(),
@@ -138,8 +106,9 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
       employees,
       excelRows,
       parsedPdfs,
-      projectConfigsAtSave: updatedConfigs,
+      projectConfigsAtSave: currentConfigs,
       clientsAtSave: get().clients,
+      employeesAtSave: employeeProfiles,
       weeklyBilling: out.weeklyBilling,
       warnings: out.warnings,
       auditLog: [
@@ -154,7 +123,6 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
     await kvSet(CURRENT_SNAPSHOT_ID, snap.id)
     set({
       current: snap,
-      projectConfigs: updatedConfigs,
       snapshots: [...get().snapshots.filter((s) => !s.isDraft), snap],
       unresolvedAllocations: out.unresolvedAllocations,
     })
@@ -174,17 +142,20 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
   recompute: async () => {
     const cur = get().current
     if (!cur || cur.locked) return
+    const recomputeProfiles = useEmployeeStore.getState().employees
     const out = reconcile({
       employees: cur.employees,
       excelRows: cur.excelRows,
       parsedPdfs: cur.parsedPdfs,
       projectConfigs: get().projectConfigs,
+      employeeProfiles: recomputeProfiles,
     })
     const updated: Snapshot = {
       ...cur,
       lastModifiedAt: new Date().toISOString(),
       projectConfigsAtSave: get().projectConfigs,
       clientsAtSave: get().clients,
+      employeesAtSave: recomputeProfiles,
       weeklyBilling: out.weeklyBilling,
       warnings: out.warnings,
     }
@@ -305,6 +276,11 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
         await putRecord('configs', cfg.projectKey, cfg)
       }
     }
+    if (bundle.employees) {
+      for (const ep of Object.values(bundle.employees)) {
+        await putRecord('employees', ep.code, ep)
+      }
+    }
     if (bundle.snapshots) {
       const existingIds = new Set(get().snapshots.map((s) => s.id))
       for (const snap of bundle.snapshots) {
@@ -314,6 +290,7 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
       }
     }
     await get().hydrate()
+    await useEmployeeStore.getState().hydrate()
   },
 
   appendAudit: (action, detail, before, after) => {

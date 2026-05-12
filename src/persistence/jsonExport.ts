@@ -1,6 +1,7 @@
 import {
   ExportBundleSchema,
   type ExportBundle,
+  type EmployeeProfile,
   type ParsedPdf,
   type ParsedPdfWithBytes,
   type ProjectConfig,
@@ -9,9 +10,10 @@ import {
 } from './schemas'
 
 export interface ExportOptions {
-  scope: 'all' | 'settings' | 'history'
+  scope: 'all' | 'settings' | 'history' | 'setup'
   clients: Record<string, Client>
   projectConfigs: Record<string, ProjectConfig>
+  employees: Record<string, EmployeeProfile>
   snapshots: Snapshot[]
 }
 
@@ -31,14 +33,17 @@ function stripPdfBytes(snap: Snapshot): Snapshot {
 
 export function buildExportBundle(opts: ExportOptions): ExportBundle {
   const includeSettings = opts.scope === 'all' || opts.scope === 'settings'
+  const includeSetup = opts.scope === 'setup'
   const includeHistory = opts.scope === 'all' || opts.scope === 'history'
+  const includeEmployees = includeSettings || includeSetup
   return {
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     appVersion: __APP_VERSION__,
     scope: opts.scope,
-    clients: includeSettings ? opts.clients : undefined,
-    projectConfigs: includeSettings ? opts.projectConfigs : undefined,
+    clients: includeSettings || includeSetup ? opts.clients : undefined,
+    projectConfigs: includeSettings || includeSetup ? opts.projectConfigs : undefined,
+    employees: includeEmployees ? opts.employees : undefined,
     snapshots: includeHistory ? opts.snapshots.map(stripPdfBytes) : undefined,
   }
 }
