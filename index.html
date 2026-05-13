@@ -1,43 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
   <head>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(function(reg) {
-    reg.addEventListener('updatefound', function() {
-      var newWorker = reg.installing;
-      if (newWorker) {
-        newWorker.addEventListener('statechange', function() {
-          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-            console.log('LotusWorks Reconciler updated — refresh for the latest version');
-          }
-        });
-      }
-    });
-  });
-  navigator.serviceWorker.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-      if (confirm('A new version of LotusWorks Reconciler is available. Reload now?')) {
-        window.location.reload();
-      }
-    }
-  });
-}
-</script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LotusWorks Reconciler</title>
     <meta name="theme-color" content="#0B0F1B" />
-
-    <!-- Fonts: Space Grotesk (display) + Plus Jakarta Sans (body) + JetBrains Mono (mono) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    />
-    <script type="module" crossorigin src="/FinanceReconciliation/assets/index-CLl1s7s4.js"></script>
-    <link rel="stylesheet" crossorigin href="/FinanceReconciliation/assets/index-eJAy4Lbx.css">
+    <!-- Fonts are self-hosted — see src/index.css @font-face declarations -->
+    <script type="module" crossorigin src="/FinanceReconciliation/assets/index-qY7RYymI.js"></script>
+    <link rel="stylesheet" crossorigin href="/FinanceReconciliation/assets/index-cipWOoHj.css">
   </head>
   <body>
     <div id="root"></div>
