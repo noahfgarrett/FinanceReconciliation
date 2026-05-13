@@ -1,0 +1,1 @@
+const n=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}),r=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}),m=new Intl.NumberFormat("en-US"),s=t=>n.format(t),e=t=>r.format(t),o=t=>`${m.format(Math.round(t*100)/100)} hr`;export{s as a,e as b,o as f};
