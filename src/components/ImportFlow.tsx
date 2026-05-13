@@ -354,11 +354,15 @@ export function ImportFlow(): React.JSX.Element {
           folderName: `${state.pdfCount} PDF${state.pdfCount !== 1 ? 's' : ''}`,
         })
 
-        const warnCount = state.allWarnings.length
+        const errCount = state.allWarnings.filter((w) => w.severity === 'error').length
+        const warnCount = state.allWarnings.filter((w) => w.severity === 'warn').length
+        const flagParts: string[] = []
+        if (errCount > 0) flagParts.push(`${errCount} ${errCount === 1 ? 'error' : 'errors'}`)
+        if (warnCount > 0) flagParts.push(`${warnCount} ${warnCount === 1 ? 'warning' : 'warnings'}`)
         setStatus(
           `Imported ${state.parsedPdfs.length} PDFs, ${state.excelResult.rows.length} Excel rows — ${state.periodLabel}.${
             state.failedPdfs > 0 ? ` ${state.failedPdfs} PDF(s) could not be parsed.` : ''
-          }${warnCount > 0 ? ` ${warnCount} warning(s).` : ''}`,
+          }${flagParts.length > 0 ? ` ${flagParts.join(', ')}.` : ''}`,
         )
       } catch (err) {
         setStatus(`Import failed: ${err instanceof Error ? err.message : String(err)}`)

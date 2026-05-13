@@ -38,6 +38,14 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
 
   const empMap = new Map(employees.map((e) => [e.code, e]))
 
+  // --- Per-employee cross-validation flags ---
+  const crossValFlags = new Map<string, RowFlag[]>()
+  function addCrossValFlag(empCode: string, flag: RowFlag): void {
+    const list = crossValFlags.get(empCode) ?? []
+    list.push(flag)
+    crossValFlags.set(empCode, list)
+  }
+
   // Excel rows are now per-employee monthly summaries (one row per employee).
   // If the same employee appears more than once we sum their hours.
   interface ExcelEmployeeTotal {
@@ -61,26 +69,45 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     }
   }
 
-  // 1. unmatched-pdf flags
+  // Build Excel allocation set per employee for cross-check
+  const excelAllocsByEmployee = new Map<string, Set<string>>()
+  for (const row of excelRows) {
+    const set = excelAllocsByEmployee.get(row.employeeCode) ?? new Set<string>()
+    for (const a of row.allocations) set.add(a.trim().toLowerCase())
+    excelAllocsByEmployee.set(row.employeeCode, set)
+  }
+
+  // 1. unmatched-pdf flags — PDF employee not in Excel
   for (const pdf of parsedPdfs) {
     if (!empMap.has(pdf.employeeCode)) {
-      warnings.push({
-        severity: 'warn',
+      const flag: RowFlag = {
+        severity: 'error',
         code: 'unmatched-pdf',
-        message: `PDF for employee code ${pdf.employeeCode} (${pdf.employeeName}) does not appear in the Excel`,
+        message: `This employee appears in PDFs but not in the Excel export`,
         context: { employeeCode: pdf.employeeCode },
-      })
+      }
+      warnings.push(flag)
+      addCrossValFlag(pdf.employeeCode, flag)
     }
   }
-  // missing-pdf flags — collapse to a single info-level summary when more
-  // than one employee has Excel rows but no imported PDFs (partial coverage).
+
+  // missing-pdf flags — Excel employee with no imported PDFs
   const pdfCodes = new Set(parsedPdfs.map((p) => p.employeeCode))
   const missingPdfEmployees: string[] = []
+  const missingPdfCodes: string[] = []
   for (const e of employees) {
     if (!pdfCodes.has(e.code)) {
       missingPdfEmployees.push(`${e.firstName} ${e.lastName} (${e.code})`)
+      missingPdfCodes.push(e.code)
+      addCrossValFlag(e.code, {
+        severity: 'error',
+        code: 'missing-pdf',
+        message: `No PDF timesheet found — hours are from Excel only`,
+        context: { employeeCode: e.code },
+      })
     }
   }
+  // Top-level summary warning (existing behavior)
   if (missingPdfEmployees.length === 1) {
     warnings.push({
       severity: 'warn',
@@ -103,21 +130,19 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     weekStart: string
     employeeCode: string
     projectKey: string
-    /** Min confidence over all contributing entries. */
     confidence: number
-    /** Deduped union of contributing entry reasons. */
     confidenceReasons: Set<string>
-    /** Source bboxes of every contributing entry (for the source viewer). */
     sources: SourceLocation[]
+    unmappedAllocation?: string
   }
   const buckets = new Map<string, Bucket>()
-  // Total PDF hours per employee — for employee-level cross-check vs Excel.
   const pdfEmployeeHours = new Map<string, number>()
-  // Distinct ISO weeks covered per employee — used to detect partial coverage.
   const weeksByEmployee = new Map<string, Set<string>>()
+  const allWeeks = new Set<string>()
+  // Track PDF allocations per employee for mismatch detection
+  const pdfAllocsByEmployee = new Map<string, Set<string>>()
 
   for (const pdf of parsedPdfs) {
-    if (!empMap.has(pdf.employeeCode)) continue
     for (const entry of pdf.entries) {
       pdfEmployeeHours.set(
         pdf.employeeCode,
@@ -126,13 +151,20 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       const set = weeksByEmployee.get(pdf.employeeCode) ?? new Set<string>()
       set.add(entry.weekStart)
       weeksByEmployee.set(pdf.employeeCode, set)
+      allWeeks.add(entry.weekStart)
+
+      // Track this PDF allocation for mismatch detection
+      const pdfAllocs = pdfAllocsByEmployee.get(pdf.employeeCode) ?? new Set<string>()
+      pdfAllocs.add(entry.allocation.trim().toLowerCase())
+      pdfAllocsByEmployee.set(pdf.employeeCode, pdfAllocs)
 
       const projectKey = resolveAllocationToProjectKey(entry.allocation, projectConfigs)
       if (!projectKey) {
         unresolved.add(entry.allocation)
-        continue
       }
-      const k = `${pdf.employeeCode}|${projectKey}|${entry.weekStart}`
+
+      const effectiveKey = projectKey ?? `__unmapped:${entry.allocation}`
+      const k = `${pdf.employeeCode}|${effectiveKey}|${entry.weekStart}`
       const existing = buckets.get(k)
       if (existing) {
         existing.hours += entry.hoursTotal
@@ -144,20 +176,20 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
           hours: entry.hoursTotal,
           weekStart: entry.weekStart,
           employeeCode: pdf.employeeCode,
-          projectKey,
+          projectKey: effectiveKey,
           confidence: entry.confidence,
           confidenceReasons: new Set(entry.confidenceReasons),
           sources: entry.source ? [entry.source] : [],
+          unmappedAllocation: projectKey ? undefined : entry.allocation,
         })
       }
     }
   }
 
   // 3. Cross-check Excel monthly totals vs PDF-derived sums at EMPLOYEE level.
-  // (Excel exports do not break out hours per project.)
   for (const [code, totals] of excelByEmployee) {
-    if (!empMap.has(code)) continue // unmatched-employee handled elsewhere
-    if (!pdfCodes.has(code)) continue // missing-pdf already flagged
+    if (!empMap.has(code)) continue
+    if (!pdfCodes.has(code)) continue
     const pdfTotal = pdfEmployeeHours.get(code) ?? 0
     const excelTotal = totals.regular + totals.overtime + totals.doubleTime
     if (Math.abs(pdfTotal - excelTotal) > HOURS_TOLERANCE) {
@@ -165,25 +197,82 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       const name = emp ? `${emp.firstName} ${emp.lastName}` : code
       const weeksCovered = weeksByEmployee.get(code)?.size ?? 0
       const partial = weeksCovered < PARTIAL_COVERAGE_WEEKS
-      warnings.push({
+      const delta = Math.abs(pdfTotal - excelTotal)
+      const flag: RowFlag = {
         severity: partial ? 'info' : 'warn',
         code: 'excel-pdf-hours-mismatch',
+        message: `PDF total: ${pdfTotal.toFixed(1)} hr · Excel total: ${excelTotal.toFixed(1)} hr · Δ ${delta.toFixed(1)} hr`,
+        context: { employeeCode: code, excelTotal, pdfTotal, weeksCovered, partial },
+      }
+      warnings.push({
+        ...flag,
         message: partial
           ? `${name} (${code}): partial PDF coverage (${weeksCovered} weeks) — Excel total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`
           : `${name} (${code}): Excel monthly total ${excelTotal.toFixed(2)} hr vs PDF total ${pdfTotal.toFixed(2)} hr`,
-        context: { employeeCode: code, excelTotal, pdfTotal, weeksCovered, partial },
       })
+      addCrossValFlag(code, flag)
     }
   }
 
-  // 4. Apply OT thresholds + rates to produce WeeklyBilling rows
+  // Allocation mismatch: PDF uses allocations not listed in Excel for that employee
+  for (const [code, pdfAllocs] of pdfAllocsByEmployee) {
+    const excelAllocs = excelAllocsByEmployee.get(code)
+    if (!excelAllocs || excelAllocs.size === 0) continue
+    for (const pdfAlloc of pdfAllocs) {
+      if (!excelAllocs.has(pdfAlloc)) {
+        const excelList = [...excelAllocs].join(', ')
+        addCrossValFlag(code, {
+          severity: 'warn',
+          code: 'allocation-not-mapped',
+          message: `PDF allocation: ${pdfAlloc.toUpperCase()} · Excel allocations: ${excelList.toUpperCase()}`,
+          context: { employeeCode: code, pdfAllocation: pdfAlloc, excelAllocations: [...excelAllocs] },
+        })
+      }
+    }
+  }
+
+  // 4. Apply OT thresholds + rates to produce WeeklyBilling rows from PDF buckets
   for (const b of buckets.values()) {
+    const flags: RowFlag[] = []
+
+    // Attach cross-validation flags for this employee
+    const cvFlags = crossValFlags.get(b.employeeCode)
+    if (cvFlags) flags.push(...cvFlags)
+
+    // Handle unmapped allocation buckets
+    if (b.unmappedAllocation) {
+      flags.push({
+        severity: 'warn',
+        code: 'allocation-not-mapped',
+        message: `Allocation code "${b.unmappedAllocation}" is not mapped to any project`,
+        context: { allocation: b.unmappedAllocation },
+      })
+      billing.push({
+        employeeCode: b.employeeCode,
+        projectKey: b.projectKey,
+        weekStart: b.weekStart,
+        hours: b.hours,
+        regularHrs: b.hours,
+        otHrs: 0,
+        dtHrs: 0,
+        regularDollars: 0,
+        otDollars: 0,
+        dtDollars: 0,
+        flags,
+        reviewed: false,
+        confidence: b.confidence,
+        confidenceReasons: Array.from(b.confidenceReasons),
+        sources: b.sources,
+      })
+      continue
+    }
+
     const cfg = projectConfigs[b.projectKey]
     if (!cfg) continue
     const split = splitWeekHours(b.hours, cfg)
     const empProfile = input.employeeProfiles?.[b.employeeCode]
     const rates = resolveRates(cfg, b.employeeCode, empProfile)
-    const flags: RowFlag[] = []
+
     if (b.hours > cfg.otThresholdHrs * HIGH_OT_RATIO) {
       const pct = Math.round((b.hours / cfg.otThresholdHrs) * 100)
       flags.push({
@@ -193,7 +282,6 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       })
     }
 
-    // Rate-based warning flags
     if (rates.source === 'none') {
       flags.push({
         severity: 'error',
@@ -248,7 +336,64 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     })
   }
 
-  // 5. allocation-not-mapped warnings
+  // 5. Create fallback billing rows for missing-PDF employees (Excel-only data).
+  // Distribute monthly Excel hours evenly across the import period's weeks.
+  const sortedWeeks = [...allWeeks].sort()
+  const weekCount = sortedWeeks.length || 4
+  const missingPdfSet = new Set(missingPdfCodes)
+  for (const [code, totals] of excelByEmployee) {
+    if (!missingPdfSet.has(code)) continue
+    const excelAllocs = excelAllocsByEmployee.get(code)
+    const firstAlloc = excelAllocs ? [...excelAllocs][0] : null
+    const projectKey = firstAlloc
+      ? resolveAllocationToProjectKey(firstAlloc, projectConfigs)
+      : null
+    if (!projectKey) continue
+
+    const cfg = projectConfigs[projectKey]
+    if (!cfg) continue
+    const empProfile = input.employeeProfiles?.[code]
+    const rates = resolveRates(cfg, code, empProfile)
+
+    const regPerWeek = round2(totals.regular / weekCount)
+    const otPerWeek = round2(totals.overtime / weekCount)
+    const dtPerWeek = round2(totals.doubleTime / weekCount)
+    const hoursPerWeek = round2(regPerWeek + otPerWeek + dtPerWeek)
+
+    const cvFlags = crossValFlags.get(code) ?? []
+
+    for (const week of sortedWeeks.length > 0 ? sortedWeeks : ['unknown']) {
+      const flags: RowFlag[] = [...cvFlags]
+
+      if (rates.source === 'none') {
+        flags.push({
+          severity: 'error',
+          code: 'no-bill-rate',
+          message: `No bill rate found for employee ${code} on project ${projectKey}`,
+        })
+      }
+
+      billing.push({
+        employeeCode: code,
+        projectKey,
+        weekStart: week,
+        hours: hoursPerWeek,
+        regularHrs: regPerWeek,
+        otHrs: otPerWeek,
+        dtHrs: dtPerWeek,
+        regularDollars: round2(regPerWeek * rates.regular),
+        otDollars: round2(otPerWeek * rates.ot),
+        dtDollars: round2(dtPerWeek * rates.dt),
+        flags,
+        reviewed: false,
+        confidence: 0,
+        confidenceReasons: ['no-pdf-source'],
+        sources: [],
+      })
+    }
+  }
+
+  // 6. allocation-not-mapped top-level warnings (keep for import status message)
   for (const alloc of unresolved) {
     warnings.push({
       severity: 'error',
@@ -258,7 +403,6 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     })
   }
 
-  // sort billing rows for stable output
   billing.sort(
     (a, b) =>
       a.employeeCode.localeCompare(b.employeeCode) ||
