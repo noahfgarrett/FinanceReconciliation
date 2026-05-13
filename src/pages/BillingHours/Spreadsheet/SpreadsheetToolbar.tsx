@@ -43,7 +43,8 @@ interface ToolbarProps {
   onQuickHasOt: () => void
   onQuickNeedsReview: () => void
   visibleRowCount: number
-  flaggedCount: number
+  errorCount: number
+  warnCount: number
   visibleTotal: number
   selectedRows: WeeklyBilling[]
   onBulkMarkReviewed: () => void
@@ -68,7 +69,8 @@ export function SpreadsheetToolbar({
   onQuickHasOt,
   onQuickNeedsReview,
   visibleRowCount,
-  flaggedCount,
+  errorCount,
+  warnCount,
   visibleTotal,
   selectedRows,
   onBulkMarkReviewed,
@@ -246,8 +248,11 @@ export function SpreadsheetToolbar({
 
         <span className="text-xs text-slate-500 tabular-nums">
           {visibleRowCount} rows
-          {flaggedCount > 0 && (
-            <> · <span className="text-amber-400">{flaggedCount} flagged</span></>
+          {errorCount > 0 && (
+            <> · <span className="text-red-400">{errorCount} {errorCount === 1 ? 'error' : 'errors'}</span></>
+          )}
+          {warnCount > 0 && (
+            <> · <span className="text-amber-400">{warnCount} {warnCount === 1 ? 'warning' : 'warnings'}</span></>
           )}
           {' · '}
           <span className="text-slate-300">{fmtUsd(visibleTotal)} visible</span>

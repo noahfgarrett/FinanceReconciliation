@@ -236,7 +236,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
     if (quickFlaggedOnly) result = result.filter((r) => r.flags.length > 0)
     if (quickErrorsOnly) result = result.filter((r) => r.flags.some((f) => f.severity === 'error'))
     if (quickHasOt) result = result.filter((r) => r.otHrs > 0)
-    if (quickNeedsReview) result = result.filter((r) => r.confidence < 0.85)
+    if (quickNeedsReview) result = result.filter((r) => r.confidence < 0.85 || r.flags.length > 0)
     return result
   }, [rows, quickFlaggedOnly, quickErrorsOnly, quickHasOt, quickNeedsReview])
 
@@ -302,7 +302,10 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
     return { hours, total: regularDollars + otDollars + dtDollars, regularDollars, otDollars }
   }, [visibleData])
 
-  const flaggedCount = visibleData.filter((r) => r.flags.length > 0).length
+  const errorCount = visibleData.filter((r) => r.flags.some((f) => f.severity === 'error')).length
+  const warnCount = visibleData.filter((r) =>
+    r.flags.length > 0 && !r.flags.some((f) => f.severity === 'error') && r.flags.some((f) => f.severity === 'warn'),
+  ).length
 
   const cellPy = DENSITY_CELL_PY[density]
 
@@ -345,7 +348,8 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
         onQuickHasOt={() => setQuickHasOt((v) => !v)}
         onQuickNeedsReview={() => setQuickNeedsReview((v) => !v)}
         visibleRowCount={visibleData.length}
-        flaggedCount={flaggedCount}
+        errorCount={errorCount}
+        warnCount={warnCount}
         visibleTotal={footerTotals.total}
         selectedRows={selectedRows}
         onBulkMarkReviewed={handleBulkMarkReviewed}
