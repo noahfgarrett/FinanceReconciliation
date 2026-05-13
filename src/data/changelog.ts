@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.0',
+    date: '2026-05-13T00:00:00Z',
+    type: 'feature',
+    notes: `### PDF vs Excel cross-validation
+- The reconciler now cross-checks PDF timesheets against Excel summaries and flags every discrepancy directly on billing rows.
+- Hours mismatches, missing PDFs, unmatched employees, and allocation code conflicts are all surfaced as row-level flags.
+- Unmapped allocation codes no longer silently disappear — they appear as $0 billing rows so nothing gets lost.
+- Employees with Excel data but no PDF now get fallback billing rows distributed across the import period.
+- The status bar shows separate error and warning counts in red and amber.
+- The "Needs review" filter now captures all flagged rows alongside low-confidence ones.`,
+  },
+  {
     version: '1.3.0',
     date: '2026-05-12T00:00:00Z',
     type: 'feature',
