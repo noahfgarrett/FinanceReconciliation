@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { SideNav } from './SideNav'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ConnectionStatusBar } from '@/components/ConnectionStatusBar'
 import { useUiStore } from '@/store/uiStore'
 import type { PageId } from '@/types'
 
@@ -27,15 +28,18 @@ export function AppShell() {
   const activePage = useUiStore((s) => s.activePage)
   const Page = PAGES[activePage]
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100">
-      <SideNav />
-      <main key={activePage} className="flex-1 overflow-y-auto page-enter">
-        <ErrorBoundary key={activePage}>
-          <Suspense fallback={<PageFallback />}>
-            <Page />
-          </Suspense>
-        </ErrorBoundary>
-      </main>
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-1 min-h-0">
+        <SideNav />
+        <main key={activePage} className="flex-1 overflow-y-auto page-enter">
+          <ErrorBoundary key={activePage}>
+            <Suspense fallback={<PageFallback />}>
+              <Page />
+            </Suspense>
+          </ErrorBoundary>
+        </main>
+      </div>
+      <ConnectionStatusBar />
     </div>
   )
 }

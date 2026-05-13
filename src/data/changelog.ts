@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.5',
+    date: '2026-05-13T00:00:00Z',
+    type: 'feature',
+    notes: `### Air-gap Mode & connection transparency
+- A new status bar at the bottom of the app shows live outbound connection activity so you always know what's reaching out.
+- Click the connection indicator to see a detailed log of every external request — URL, method, timestamp, and status.
+- "Air-gap Mode" toggle fully blocks all outbound network calls when enabled, keeping the app completely offline.
+- Fonts are now bundled directly into the app — no more loading from Google Fonts on every page load.
+- The GitHub version check is skipped when Air-gap Mode is active.`,
+  },
+  {
     version: '1.4.0',
     date: '2026-05-13T00:00:00Z',
     type: 'feature',
