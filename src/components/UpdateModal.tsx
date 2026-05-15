@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { marked } from 'marked'
-import { Download, X, ChevronDown, CheckCircle2 } from 'lucide-react'
+import { Download, X, ChevronDown, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { CHANGELOG } from '@/data/changelog'
@@ -40,8 +40,11 @@ const TYPE_COLORS: Record<ChangelogEntry['type'], { bar: string; text: string; b
 
 const INITIAL_VISIBLE = 8
 
+type DownloadState = 'idle' | 'downloading' | 'done' | 'error'
+
 export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProps) {
-  const [updated, setUpdated] = useState(false)
+  const [downloadState, setDownloadState] = useState<DownloadState>('idle')
+  const [downloadError, setDownloadError] = useState('')
   const [activeTab, setActiveTab] = useState<'update' | 'changelog'>(
     defaultTab ?? (info ? 'update' : 'changelog'),
   )
@@ -103,11 +106,35 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
     })
   }
 
-  function handleDownload(): void {
-    if (!info?.downloadUrl) return
-    window.open(info.downloadUrl, '_blank', 'noopener')
-    setUpdated(true)
-  }
+  const handleDownload = useCallback(async (): Promise<void> => {
+    if (!info?.assetApiUrl) return
+    setDownloadState('downloading')
+    setDownloadError('')
+    try {
+      // Fetch the release asset via GitHub API — the octet-stream Accept header
+      // triggers a redirect to the CDN which serves the binary with CORS headers.
+      const res = await fetch(info.assetApiUrl, {
+        headers: { Accept: 'application/octet-stream' },
+      })
+      if (!res.ok) throw new Error(`Download failed (${res.status})`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = info.assetName || 'Reconciler.html'
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      // Small delay before revoking so the browser can start the download
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setDownloadState('done')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Download failed'
+      setDownloadError(msg)
+      setDownloadState('error')
+    }
+  }, [info?.assetApiUrl, info?.assetName])
 
   const modalTitle = info ? 'Update Available' : 'Changelog'
 
@@ -144,17 +171,17 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
 
         {/* Update Tab */}
         {activeTab === 'update' && info && (
-          updated ? (
+          downloadState === 'done' ? (
             <div className="flex flex-col items-center gap-4 py-6">
               <CheckCircle2 size={48} className="text-emerald-400" />
               <div className="text-center space-y-1.5">
-                <p className="text-lg font-semibold text-slate-100">Download started!</p>
+                <p className="text-lg font-semibold text-slate-100">Download complete!</p>
                 <p className="text-sm text-slate-400">
-                  v{info.version} is downloading now.
+                  v{info.version} has been saved to your downloads folder.
                 </p>
               </div>
               <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 text-xs text-slate-500 text-center max-w-sm">
-                Replace your current Reconciler.html with the downloaded file, or update your bookmark to point to the new copy.
+                Replace your current Reconciler.html with the downloaded file, then refresh to start using the new version.
               </div>
             </div>
           ) : (
@@ -181,6 +208,13 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
                 <p>Replace your current Reconciler.html with the new file to keep future updates working.</p>
               </div>
 
+              {downloadState === 'error' && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{downloadError || 'Download failed. Please try again.'}</span>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 justify-end pt-1">
                 <Button variant="ghost" size="sm" onClick={onClose} icon={<X size={14} />}>
                   Skip this version
@@ -188,11 +222,14 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleDownload}
-                  disabled={!info.downloadUrl}
-                  icon={<Download size={14} />}
+                  onClick={() => void handleDownload()}
+                  disabled={downloadState === 'downloading'}
+                  icon={downloadState === 'downloading'
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <Download size={14} />
+                  }
                 >
-                  Download v{info.version}
+                  {downloadState === 'downloading' ? 'Downloading…' : downloadState === 'error' ? 'Retry Download' : `Download v${info.version}`}
                 </Button>
               </div>
             </>
