@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.7',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Excel import fix
+- Fixed Excel file imports failing when running from a downloaded HTML file (file:// protocol).
+- The Excel processing worker is now fully bundled into the app — no separate script files needed.
+- In-app update checker now makes a single network request instead of duplicating on startup.
+- Connection status bar accurately reflects when requests have completed.`,
+  },
+  {
     version: '1.4.6',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',
