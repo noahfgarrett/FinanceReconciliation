@@ -106,35 +106,26 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
     })
   }
 
-  const handleDownload = useCallback(async (): Promise<void> => {
-    if (!info?.assetApiUrl) return
-    setDownloadState('downloading')
-    setDownloadError('')
+  const handleDownload = useCallback((): void => {
+    if (!info?.downloadUrl) return
+    // Use a plain <a> click instead of fetch() — browser-initiated downloads
+    // follow redirects without CORS restrictions, so this works from file://
+    // and any origin. GitHub's release CDN serves Content-Disposition: attachment
+    // so the browser downloads rather than navigating away.
     try {
-      // Fetch the release asset via GitHub API — the octet-stream Accept header
-      // triggers a redirect to the CDN which serves the binary with CORS headers.
-      const res = await fetch(info.assetApiUrl, {
-        headers: { Accept: 'application/octet-stream' },
-      })
-      if (!res.ok) throw new Error(`Download failed (${res.status})`)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = info.assetName || `Reconciler-v${info.version}.html`
+      a.href = info.downloadUrl
       a.style.display = 'none'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      // Small delay before revoking so the browser can start the download
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
       setDownloadState('done')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Download failed'
       setDownloadError(msg)
       setDownloadState('error')
     }
-  }, [info?.assetApiUrl, info?.assetName, info?.version])
+  }, [info?.downloadUrl])
 
   const modalTitle = info ? 'Update Available' : 'Changelog'
 
@@ -222,7 +213,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => void handleDownload()}
+                  onClick={handleDownload}
                   disabled={downloadState === 'downloading'}
                   icon={downloadState === 'downloading'
                     ? <Loader2 size={14} className="animate-spin" />
