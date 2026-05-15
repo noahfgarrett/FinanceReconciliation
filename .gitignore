@@ -36,6 +36,9 @@ Thumbs.db
 # Local-only integration tests that depend on user-supplied fixtures
 test/integration/
 
+# Generated test data output
+test-data/output/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
