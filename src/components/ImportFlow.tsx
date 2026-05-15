@@ -31,9 +31,11 @@ function inferPeriodLabel(isoDates: string[]): string {
 /*  Detection helpers                                                  */
 /* ------------------------------------------------------------------ */
 
-interface DetectedNewProjects {
+export interface DetectedProject {
   name: string
   allocations: string[]
+  isNew: boolean
+  existingConfig?: ProjectConfig
 }
 
 interface DetectedNewEmployees {
@@ -43,14 +45,15 @@ interface DetectedNewEmployees {
 }
 
 /**
- * Detect project names from Excel that don't yet exist in projectConfigs.
- * For each new project, try to find matching allocation codes from PDFs.
+ * Detect ALL project names from Excel, marking each as new or existing.
+ * For each project, try to find matching allocation codes from PDFs.
+ * Existing projects carry their stored config so the wizard can pre-fill values.
  */
-function detectNewProjects(
+function detectAllProjects(
   excelResult: ExcelParseResult,
   parsedPdfs: ParsedPdfWithBytes[],
   existingConfigs: Record<string, ProjectConfig>,
-): DetectedNewProjects[] {
+): DetectedProject[] {
   // Collect all project names from Excel
   const allProjectNames = new Set<string>()
   for (const row of excelResult.rows) {
@@ -60,16 +63,15 @@ function detectNewProjects(
     }
   }
 
-  // Filter to only new ones
-  const newNames: string[] = []
-  for (const name of allProjectNames) {
-    const key = slugifyProjectName(name)
-    if (!existingConfigs[key]) {
-      newNames.push(name)
-    }
-  }
+  if (allProjectNames.size === 0) return []
 
-  if (newNames.length === 0) return []
+  // Classify each project as new or existing
+  const allNames = [...allProjectNames]
+  const projectStatus = allNames.map((name) => {
+    const key = slugifyProjectName(name)
+    const config = existingConfigs[key]
+    return { name, isNew: !config, existingConfig: config }
+  })
 
   // Build a map of employee -> project names from Excel so we can link
   // allocations from PDFs back to projects
@@ -180,7 +182,7 @@ function detectNewProjects(
   }
 
   // For each project, score all allocation matches
-  const projectAllocScores = newNames.map((name) => {
+  const projectAllocScores = allNames.map((name) => {
     const scores = new Map<string, number>()
     for (const alloc of allPdfAllocations) {
       if (isAllocMatch(alloc, name)) {
@@ -206,11 +208,13 @@ function detectNewProjects(
     }
   }
 
-  return newNames.map((name, i) => ({
+  return allNames.map((name, i) => ({
     name,
     allocations: [...(projectAllocScores[i].scores.keys())].filter(
       (alloc) => allocOwner.get(alloc) === i,
     ),
+    isNew: projectStatus[i].isNew,
+    existingConfig: projectStatus[i].existingConfig,
   }))
 }
 
@@ -245,7 +249,7 @@ function detectNewEmployees(
 
 interface WizardState {
   isOpen: boolean
-  newProjects: DetectedNewProjects[]
+  allProjects: DetectedProject[]
   newEmployees: DetectedNewEmployees[]
   employeeProjectMap: Record<string, string[]>
   // Stashed data to import after wizard completes
@@ -259,7 +263,7 @@ interface WizardState {
 
 const INITIAL_WIZARD_STATE: WizardState = {
   isOpen: false,
-  newProjects: [],
+  allProjects: [],
   newEmployees: [],
   employeeProjectMap: {},
   excelResult: null,
@@ -289,6 +293,10 @@ export function ImportFlow(): React.JSX.Element {
   // Hold parsed Excel result in a ref so PDF can reference it later
   const excelResultRef = useRef<ExcelParseResult | null>(null)
   const excelFileRef = useRef<File | null>(null)
+  // Buffer PDF files dropped before Excel finishes parsing (simultaneous drop)
+  const pendingPdfFilesRef = useRef<File[] | null>(null)
+  // Stable ref to handlePdfFolder so handleExcel can call it without a dependency cycle
+  const handlePdfFolderRef = useRef<(files: File[]) => Promise<void>>(async () => {})
 
   const handleExcel = useCallback(async (file: File) => {
     setBusy(true)
@@ -303,6 +311,13 @@ export function ImportFlow(): React.JSX.Element {
         const msg = result.warnings.find((w) => w.code === 'parse-failure')?.message ?? 'Parse failed'
         setStatus(`Excel error: ${msg}`)
       } else {
+        // If PDFs were dropped simultaneously, process them now
+        const bufferedPdfs = pendingPdfFilesRef.current
+        if (bufferedPdfs) {
+          pendingPdfFilesRef.current = null
+          void handlePdfFolderRef.current(bufferedPdfs)
+          return
+        }
         const warnCount = result.warnings.length
         setStatus(
           `Excel parsed: ${result.rows.length} rows, ${result.employees.length} employees${warnCount ? ` (${warnCount} warning${warnCount > 1 ? 's' : ''})` : ''}. Now drop the PDF folder.`,
@@ -311,6 +326,7 @@ export function ImportFlow(): React.JSX.Element {
     } catch (err) {
       setStatus(`Excel parse failed: ${err instanceof Error ? err.message : String(err)}`)
       excelResultRef.current = null
+      pendingPdfFilesRef.current = null
     } finally {
       setBusy(false)
     }
@@ -370,6 +386,7 @@ export function ImportFlow(): React.JSX.Element {
         setBusy(false)
         excelResultRef.current = null
         excelFileRef.current = null
+        pendingPdfFilesRef.current = null
       }
     },
     [importBatch, addRecentImport, upsertProjectConfig, upsertManyEmployees],
@@ -394,7 +411,9 @@ export function ImportFlow(): React.JSX.Element {
   const handlePdfFolder = useCallback(
     async (files: File[]) => {
       if (!excelResultRef.current) {
-        setStatus('Drop the monthly Excel first, then the PDF folder.')
+        // Excel is still parsing (simultaneous drop) — buffer for later
+        pendingPdfFilesRef.current = files
+        setStatus('Waiting for Excel to finish parsing before processing PDFs...')
         return
       }
 
@@ -430,12 +449,13 @@ export function ImportFlow(): React.JSX.Element {
         const periodLabel = inferPeriodLabel(entryDates)
         const failedPdfs = pdfResults.filter((r) => r.result.parsed === null).length
 
-        // Detect new projects and employees
-        const newProjects = detectNewProjects(
+        // Detect all projects (new + existing) and new employees
+        const allProjects = detectAllProjects(
           excelResultRef.current,
           parsedPdfs,
           projectConfigs,
         )
+        const hasNewProjects = allProjects.some((p) => p.isNew)
         const newEmployees = detectNewEmployees(
           excelResultRef.current,
           employeeProfiles,
@@ -453,10 +473,10 @@ export function ImportFlow(): React.JSX.Element {
         }
 
         // If there are new items, show the wizard; otherwise import directly
-        if (newProjects.length > 0 || newEmployees.length > 0) {
+        if (hasNewProjects || newEmployees.length > 0) {
           setWizard({
             isOpen: true,
-            newProjects,
+            allProjects,
             newEmployees,
             employeeProjectMap: empProjMap,
             excelResult: excelResultRef.current,
@@ -472,7 +492,7 @@ export function ImportFlow(): React.JSX.Element {
           // Nothing new — import directly
           const stashedState: WizardState = {
             isOpen: false,
-            newProjects: [],
+            allProjects: [],
             newEmployees: [],
             employeeProjectMap: empProjMap,
             excelResult: excelResultRef.current,
@@ -492,6 +512,9 @@ export function ImportFlow(): React.JSX.Element {
     [projectConfigs, employeeProfiles, finalizeImport],
   )
 
+  // Keep the stable ref in sync so handleExcel can call the latest handlePdfFolder
+  handlePdfFolderRef.current = handlePdfFolder
+
   return (
     <>
       <DropZone
@@ -505,7 +528,7 @@ export function ImportFlow(): React.JSX.Element {
           open={wizard.isOpen}
           onComplete={handleWizardComplete}
           onCancel={handleWizardCancel}
-          newProjects={wizard.newProjects}
+          allProjects={wizard.allProjects}
           newEmployees={wizard.newEmployees}
           existingProjects={projectConfigs}
           employeeProjectMap={wizard.employeeProjectMap}
