@@ -1,7 +1,12 @@
 import { Fragment, useState } from 'react'
 import { ChevronRight, ChevronDown, Users } from 'lucide-react'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
+import { resolveRates } from '@/reconciler/otCalculator'
+import { useEmployeeStore } from '@/store/employeeStore'
 import { fmtUsd, fmtHours } from '@/lib/format'
+
+/** Standard US payroll workweek — always 40 regardless of project threshold */
+const STANDARD_WORKWEEK = 40
 
 interface EmployeeAgg {
   code: string
@@ -9,7 +14,8 @@ interface EmployeeAgg {
   projects: Set<string>
   weeks: Set<string>
   hours: number
-  otHrs: number
+  otWorked: number   // hours over 40/wk (payroll standard)
+  otBilled: number   // hours over project threshold (billed at 1.5x)
   billable: number
 }
 
@@ -17,11 +23,14 @@ interface SubRow {
   projectKey: string
   weekStart: string
   hours: number
-  otHrs: number
+  otWorked: number
+  otBilled: number
+  regularRate: number
+  otRate: number
   billable: number
 }
 
-type SortKey = 'name' | 'projects' | 'weeks' | 'hours' | 'otHrs' | 'billable'
+type SortKey = 'name' | 'projects' | 'weeks' | 'hours' | 'otWorked' | 'otBilled' | 'billable'
 type SortDir = 'asc' | 'desc'
 
 const WEEK_FMT = new Intl.DateTimeFormat('en-US', {
@@ -45,6 +54,7 @@ export function ByEmployeeView({
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<SortKey>('billable')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const employeeProfiles = useEmployeeStore((s) => s.employees)
 
   const byEmployee = new Map<string, EmployeeAgg>()
   for (const row of snap.weeklyBilling) {
@@ -55,13 +65,15 @@ export function ByEmployeeView({
       projects: new Set<string>(),
       weeks: new Set<string>(),
       hours: 0,
-      otHrs: 0,
+      otWorked: 0,
+      otBilled: 0,
       billable: 0,
     }
     agg.projects.add(row.projectKey)
     agg.weeks.add(row.weekStart)
     agg.hours += row.hours
-    agg.otHrs += row.otHrs
+    agg.otWorked += Math.max(0, row.hours - STANDARD_WORKWEEK)
+    agg.otBilled += row.otHrs
     agg.billable += row.regularDollars + row.otDollars + row.dtDollars
     byEmployee.set(row.employeeCode, agg)
   }
@@ -76,11 +88,17 @@ export function ByEmployeeView({
   const subRowsByEmployee = new Map<string, SubRow[]>()
   for (const row of snap.weeklyBilling) {
     const list = subRowsByEmployee.get(row.employeeCode) ?? []
+    const cfg = configs[row.projectKey]
+    const empProfile = employeeProfiles[row.employeeCode]
+    const rates = cfg ? resolveRates(cfg, row.employeeCode, empProfile) : { regular: 0, ot: 0 }
     list.push({
       projectKey: row.projectKey,
       weekStart: row.weekStart,
       hours: row.hours,
-      otHrs: row.otHrs,
+      otWorked: Math.max(0, row.hours - STANDARD_WORKWEEK),
+      otBilled: row.otHrs,
+      regularRate: rates.regular,
+      otRate: rates.ot,
       billable: row.regularDollars + row.otDollars + row.dtDollars,
     })
     subRowsByEmployee.set(row.employeeCode, list)
@@ -93,7 +111,8 @@ export function ByEmployeeView({
       case 'projects': diff = a.projects.size - b.projects.size; break
       case 'weeks': diff = a.weeks.size - b.weeks.size; break
       case 'hours': diff = a.hours - b.hours; break
-      case 'otHrs': diff = a.otHrs - b.otHrs; break
+      case 'otWorked': diff = a.otWorked - b.otWorked; break
+      case 'otBilled': diff = a.otBilled - b.otBilled; break
       case 'billable': diff = a.billable - b.billable; break
     }
     return sortDir === 'asc' ? diff : -diff
@@ -150,8 +169,11 @@ export function ByEmployeeView({
             <Th sortKey="hours" active={sortKey} dir={sortDir} onSort={handleSort} right>
               Total Hours
             </Th>
-            <Th sortKey="otHrs" active={sortKey} dir={sortDir} onSort={handleSort} right>
-              OT Hours
+            <Th sortKey="otWorked" active={sortKey} dir={sortDir} onSort={handleSort} right>
+              OT Worked
+            </Th>
+            <Th sortKey="otBilled" active={sortKey} dir={sortDir} onSort={handleSort} right>
+              OT Billed
             </Th>
             <Th sortKey="billable" active={sortKey} dir={sortDir} onSort={handleSort} right>
               Total Billable
@@ -190,8 +212,11 @@ export function ByEmployeeView({
                   <td className="px-5 py-3 text-right tabular-nums text-slate-300">
                     {fmtHours(agg.hours)}
                   </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-amber-400">
+                    {fmtHours(agg.otWorked)}
+                  </td>
                   <td className="px-5 py-3 text-right tabular-nums text-lw-orange-400">
-                    {fmtHours(agg.otHrs)}
+                    {fmtHours(agg.otBilled)}
                   </td>
                   <td className="px-5 py-3 text-right tabular-nums font-medium text-slate-100">
                     {fmtUsd(agg.billable)}
@@ -199,7 +224,7 @@ export function ByEmployeeView({
                 </tr>
                 {isOpen && (
                   <tr key={`${agg.code}-sub`} className="border-b border-slate-900/60 last:border-0">
-                    <td colSpan={6} className="px-0 py-0 bg-slate-950/50">
+                    <td colSpan={7} className="px-0 py-0 bg-slate-950/50">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-slate-800/60">
@@ -213,7 +238,13 @@ export function ByEmployeeView({
                               Hours
                             </th>
                             <th className="px-5 py-2 text-[10px] uppercase tracking-wider text-slate-600 font-semibold text-right">
-                              OT Hours
+                              OT Worked
+                            </th>
+                            <th className="px-5 py-2 text-[10px] uppercase tracking-wider text-slate-600 font-semibold text-right">
+                              OT Billed
+                            </th>
+                            <th className="px-5 py-2 text-[10px] uppercase tracking-wider text-slate-600 font-semibold text-right">
+                              Bill Rate
                             </th>
                             <th className="px-5 py-2 text-[10px] uppercase tracking-wider text-slate-600 font-semibold text-right">
                               Billable
@@ -233,8 +264,25 @@ export function ByEmployeeView({
                               <td className="px-5 py-2 text-right tabular-nums text-slate-400">
                                 {fmtHours(sr.hours)}
                               </td>
+                              <td className="px-5 py-2 text-right tabular-nums text-amber-400/80">
+                                {fmtHours(sr.otWorked)}
+                              </td>
                               <td className="px-5 py-2 text-right tabular-nums text-lw-orange-400/80">
-                                {fmtHours(sr.otHrs)}
+                                {fmtHours(sr.otBilled)}
+                              </td>
+                              <td className="px-5 py-2 text-right tabular-nums text-slate-400">
+                                {sr.regularRate > 0 ? (
+                                  <span>
+                                    {fmtUsd(sr.regularRate)}<span className="text-slate-600">/hr</span>
+                                    {sr.otBilled > 0 && (
+                                      <span className="text-lw-orange-400/60 ml-1">
+                                        ({fmtUsd(sr.otRate)}<span className="text-slate-600">/OT</span>)
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-600">—</span>
+                                )}
                               </td>
                               <td className="px-5 py-2 text-right tabular-nums text-slate-300">
                                 {fmtUsd(sr.billable)}

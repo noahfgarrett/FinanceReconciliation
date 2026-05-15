@@ -97,9 +97,9 @@ export function KpiStrip({ snap, configs }: { snap: Snapshot; configs: Record<st
         accent="blue"
       />
       <Tile
-        label="Overtime"
+        label="Overtime Billed"
         value={fmtUsd(totalOt + totalDt)}
-        sub={`${fmtHours(otHrs)} @ 1.5×`}
+        sub={`${fmtHours(otHrs)} billed @ 1.5×`}
         icon={Zap}
         accent="amber"
       />
