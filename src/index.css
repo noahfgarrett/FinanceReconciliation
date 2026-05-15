@@ -83,6 +83,7 @@
   --surface-interactive:        #363B47;        /* buttons resting   — rgb(54,59,71) */
   --surface-interactive-hover:  #424755;        /* buttons hover     — rgb(66,71,85) */
   --surface-subtle:             rgba(255,255,255,0.03);  /* subtle row hover */
+  --surface-hover:              rgba(255,255,255,0.06);  /* unified hover tint */
 
   /* ── Text (dark) — passes WCAG AA on surface-base ── */
   --text-primary:   #F1F5FB;   /* near-white with a hint of blue */
@@ -144,6 +145,7 @@
   --surface-interactive:       #F2EFE9;   /* buttons resting */
   --surface-interactive-hover: #E8E3D9;   /* buttons hover */
   --surface-subtle:            rgba(0,0,0,0.025);
+  --surface-hover:             rgba(244, 123, 32, 0.06);  /* warm brand-tinted hover */
 
   /* ── Text (light) — warm slate ink ── */
   --text-primary:   #11151E;
@@ -309,20 +311,58 @@ h1, h2, h3 {
 .light .text-slate-500 { color: var(--text-muted); }
 .light .text-slate-600 { color: var(--text-faint); }
 
-/* Hover-state row backgrounds (used by tables) */
+/* Hover-state backgrounds — unified warm tint for both themes.
+ * Every hover:bg-slate-* used in the codebase is mapped here so light
+ * mode never falls through to the raw dark-grey Tailwind value. */
+.dark .hover\:bg-slate-900\/30:hover,
 .dark .hover\:bg-slate-900\/40:hover,
 .dark .hover\:bg-slate-900\/50:hover,
 .dark .hover\:bg-slate-900\/60:hover,
+.dark .hover\:bg-slate-900\/70:hover,
+.dark .hover\:bg-slate-900\/80:hover,
+.dark .hover\:bg-slate-800\/50:hover,
 .dark .hover\:bg-slate-800\/70:hover,
 .dark .hover\:bg-slate-800:hover,
-.dark .hover\:bg-slate-900:hover { background-color: var(--surface-subtle); }
+.dark .hover\:bg-slate-900:hover { background-color: var(--surface-hover); }
 
+.light .hover\:bg-slate-900\/30:hover,
 .light .hover\:bg-slate-900\/40:hover,
 .light .hover\:bg-slate-900\/50:hover,
 .light .hover\:bg-slate-900\/60:hover,
+.light .hover\:bg-slate-900\/70:hover,
+.light .hover\:bg-slate-900\/80:hover,
+.light .hover\:bg-slate-800\/50:hover,
 .light .hover\:bg-slate-800\/70:hover,
 .light .hover\:bg-slate-800:hover,
-.light .hover\:bg-slate-900:hover { background-color: var(--surface-subtle); }
+.light .hover\:bg-slate-900:hover { background-color: var(--surface-hover); }
+
+/* Hover-state borders — map to token-driven values */
+.light .hover\:border-slate-500:hover,
+.light .hover\:border-slate-600:hover { border-color: var(--border-emphasis); }
+.light .hover\:border-slate-700:hover { border-color: var(--border-default); }
+
+.dark .hover\:border-slate-500:hover,
+.dark .hover\:border-slate-600:hover { border-color: var(--border-emphasis); }
+.dark .hover\:border-slate-700:hover { border-color: var(--border-default); }
+
+/* Hover-state text — map to token-driven ink colours */
+.light .hover\:text-slate-100:hover,
+.light .hover\:text-slate-200:hover { color: var(--text-primary); }
+.light .hover\:text-slate-300:hover { color: var(--text-secondary); }
+.light .hover\:text-slate-400:hover { color: var(--text-muted); }
+
+.dark .hover\:text-slate-100:hover,
+.dark .hover\:text-slate-200:hover { color: var(--text-primary); }
+.dark .hover\:text-slate-300:hover { color: var(--text-secondary); }
+.dark .hover\:text-slate-400:hover { color: var(--text-muted); }
+
+/* Orange text — darken in light mode for readability.
+ * The lighter brand-orange shades (200–500) lack contrast on cream backgrounds.
+ * Map them to the 700 shade (#A8480A) which passes WCAG AA and reads as warm orange. */
+.light .text-lw-orange-200 { color: var(--brand-orange-700); }
+.light .text-lw-orange-300 { color: var(--brand-orange-700); }
+.light .text-lw-orange-400 { color: var(--brand-orange-700); }
+.light .text-lw-orange-500 { color: var(--brand-orange-700); }
 
 /* Inputs / selects — derive entirely from tokens */
 .light select,
