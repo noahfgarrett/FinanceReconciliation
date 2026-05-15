@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.6',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Light mode polish
+- Hover effects on buttons and table rows in light mode now use a warm brand-tinted highlight instead of dark gray.
+- Selected/active text (sidebar nav, tabs, settings) is now a darker orange for better readability on light backgrounds.`,
+  },
+  {
     version: '1.4.5',
     date: '2026-05-13T00:00:00Z',
     type: 'feature',
