@@ -121,7 +121,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = info.assetName || 'Reconciler.html'
+      a.download = info.assetName || `Reconciler-v${info.version}.html`
       a.style.display = 'none'
       document.body.appendChild(a)
       a.click()
@@ -134,7 +134,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
       setDownloadError(msg)
       setDownloadState('error')
     }
-  }, [info?.assetApiUrl, info?.assetName])
+  }, [info?.assetApiUrl, info?.assetName, info?.version])
 
   const modalTitle = info ? 'Update Available' : 'Changelog'
 
@@ -181,7 +181,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
                 </p>
               </div>
               <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 text-xs text-slate-500 text-center max-w-sm">
-                Replace your current Reconciler.html with the downloaded file, then refresh to start using the new version.
+                Open the downloaded Reconciler-v{info.version}.html to start using the new version.
               </div>
             </div>
           ) : (
@@ -205,7 +205,7 @@ export function UpdateModal({ open, onClose, info, defaultTab }: UpdateModalProp
 
               <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 text-xs text-slate-500 space-y-1.5">
                 <p className="text-slate-300 font-medium">After downloading:</p>
-                <p>Replace your current Reconciler.html with the new file to keep future updates working.</p>
+                <p>The download will be named Reconciler-v{info.version}.html — open it to start using the new version.</p>
               </div>
 
               {downloadState === 'error' && (
