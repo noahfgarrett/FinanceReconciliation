@@ -8,15 +8,71 @@ interface Props {
   status?: string
 }
 
+/** Read all files from a FileSystemDirectoryEntry recursively. */
+async function readDirRecursive(dir: FileSystemDirectoryEntry): Promise<File[]> {
+  const reader = dir.createReader()
+  const files: File[] = []
+  // readEntries may return results in batches — keep calling until empty
+  let batch: FileSystemEntry[] = []
+  do {
+    batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+      reader.readEntries(resolve, reject)
+    })
+    for (const entry of batch) {
+      if (entry.isDirectory) {
+        files.push(...await readDirRecursive(entry as FileSystemDirectoryEntry))
+      } else if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) => {
+          ;(entry as FileSystemFileEntry).file(resolve, reject)
+        })
+        files.push(file)
+      }
+    }
+  } while (batch.length > 0)
+  return files
+}
+
+/** Flatten all files from a drop event, traversing directories via webkitGetAsEntry. */
+async function extractDroppedFiles(dataTransfer: DataTransfer): Promise<File[]> {
+  const items = dataTransfer.items
+  const files: File[] = []
+
+  if (items?.length) {
+    const entries: FileSystemEntry[] = []
+    // Collect entries synchronously first — items list is cleared after the event
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry?.()
+      if (entry) entries.push(entry)
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory) {
+        files.push(...await readDirRecursive(entry as FileSystemDirectoryEntry))
+      } else if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) => {
+          ;(entry as FileSystemFileEntry).file(resolve, reject)
+        })
+        files.push(file)
+      }
+    }
+  }
+
+  // Fallback: if webkitGetAsEntry wasn't available, use flat files list
+  if (files.length === 0) {
+    files.push(...Array.from(dataTransfer.files))
+  }
+
+  return files
+}
+
 export function DropZone({ onExcel, onPdfFolder, busy, status }: Props) {
   const [hover, setHover] = useState(false)
   const excelRef = useRef<HTMLInputElement>(null)
   const folderRef = useRef<HTMLInputElement>(null)
 
-  function onDrop(e: DragEvent<HTMLDivElement>) {
+  async function onDrop(e: DragEvent<HTMLDivElement>): Promise<void> {
     e.preventDefault()
     setHover(false)
-    const files = Array.from(e.dataTransfer.files)
+    const files = await extractDroppedFiles(e.dataTransfer)
     const xlsx = files.find((f) => /\.xlsx$/i.test(f.name))
     if (xlsx && onExcel) onExcel(xlsx)
     const pdfs = files.filter((f) => /\.pdf$/i.test(f.name))
