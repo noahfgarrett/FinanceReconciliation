@@ -131,7 +131,13 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
   upsertProjectConfig: async (cfg) => {
     await putRecord('configs', cfg.projectKey, cfg)
     set({ projectConfigs: { ...get().projectConfigs, [cfg.projectKey]: cfg } })
-    await get().recompute()
+    try {
+      await get().recompute()
+    } catch {
+      // Recompute may fail if the snapshot data is inconsistent (e.g. during a
+      // fresh import).  The config itself is already persisted above — swallow
+      // the error so the caller can continue upserting remaining configs.
+    }
   },
 
   upsertClient: async (c) => {
@@ -143,13 +149,35 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
     const cur = get().current
     if (!cur || cur.locked) return
     const recomputeProfiles = useEmployeeStore.getState().employees
-    const out = reconcile({
-      employees: cur.employees,
-      excelRows: cur.excelRows,
-      parsedPdfs: cur.parsedPdfs,
-      projectConfigs: get().projectConfigs,
-      employeeProfiles: recomputeProfiles,
-    })
+    let out: ReturnType<typeof reconcile>
+    try {
+      out = reconcile({
+        employees: cur.employees,
+        excelRows: cur.excelRows,
+        parsedPdfs: cur.parsedPdfs,
+        projectConfigs: get().projectConfigs,
+        employeeProfiles: recomputeProfiles,
+      })
+    } catch {
+      // If reconcile throws, preserve the existing billing data rather than
+      // losing everything.  The config change that triggered the recompute is
+      // already persisted — only the billing recalculation failed.
+      return
+    }
+
+    // Safety guard: never replace non-empty billing with an empty result,
+    // and never let a recompute inflate unmapped rows.  Either case usually
+    // means allocation resolution regressed (e.g. aliases were removed).
+    // Preserve old billing to avoid data loss.
+    if (out.weeklyBilling.length === 0 && cur.weeklyBilling.length > 0) {
+      return
+    }
+    const oldUnmapped = cur.weeklyBilling.filter((r) => r.projectKey.startsWith('__unmapped:')).length
+    const newUnmapped = out.weeklyBilling.filter((r) => r.projectKey.startsWith('__unmapped:')).length
+    if (newUnmapped > oldUnmapped && cur.weeklyBilling.length > 0) {
+      return
+    }
+
     const updated: Snapshot = {
       ...cur,
       lastModifiedAt: new Date().toISOString(),

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   slugifyProjectName,
   resolveAllocationToProjectKey,
+  allocFamily,
   buildEmployeeAllocationMap,
 } from './projectMatching'
 import type { ExcelRow, ProjectConfig } from '@/persistence/schemas'
@@ -23,6 +24,23 @@ describe('slugifyProjectName', () => {
   })
 })
 
+describe('allocFamily', () => {
+  it('extracts first segment when >= 3 chars', () => {
+    expect(allocFamily('CARDINAL-CX-002')).toBe('cardinal')
+    expect(allocFamily('FAB52-MEP-001')).toBe('fab52')
+    expect(allocFamily('ADMIN-OFC-001')).toBe('admin')
+  })
+  it('joins first two segments when first < 3 chars', () => {
+    expect(allocFamily('OH-DC1-CX-001')).toBe('oh-dc1')
+  })
+  it('handles single segment', () => {
+    expect(allocFamily('CARDINAL')).toBe('cardinal')
+  })
+  it('returns empty for empty string', () => {
+    expect(allocFamily('')).toBe('')
+  })
+})
+
 describe('resolveAllocationToProjectKey', () => {
   const configs: Record<string, ProjectConfig> = { 'project-acme': cfg() }
 
@@ -34,6 +52,53 @@ describe('resolveAllocationToProjectKey', () => {
   })
   it('returns null when no match', () => {
     expect(resolveAllocationToProjectKey('UNKNOWN-XYZ', configs)).toBeNull()
+  })
+
+  it('resolves via prefix-family when exact match fails', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-cardinal': cfg({
+        projectKey: 'project-cardinal',
+        displayName: 'Cardinal',
+        allocationAliases: ['CARDINAL-CX-002'],
+      }),
+    }
+    // CARDINAL-PNL-004 shares family "cardinal" with the alias CARDINAL-CX-002
+    expect(resolveAllocationToProjectKey('CARDINAL-PNL-004', cfgs)).toBe('project-cardinal')
+  })
+
+  it('returns null when family matches multiple projects', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-a': cfg({
+        projectKey: 'project-a',
+        allocationAliases: ['CARDINAL-CX-002'],
+      }),
+      'project-b': cfg({
+        projectKey: 'project-b',
+        allocationAliases: ['CARDINAL-QC-001'],
+      }),
+    }
+    // Family "cardinal" matches BOTH projects — ambiguous, so null
+    expect(resolveAllocationToProjectKey('CARDINAL-PNL-004', cfgs)).toBeNull()
+  })
+
+  it('prefers exact match over family match', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-cardinal': cfg({
+        projectKey: 'project-cardinal',
+        allocationAliases: ['CARDINAL-CX-002', 'CARDINAL-PNL-004'],
+      }),
+    }
+    expect(resolveAllocationToProjectKey('CARDINAL-PNL-004', cfgs)).toBe('project-cardinal')
+  })
+
+  it('resolves short-prefix families correctly', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-oh-dc1': cfg({
+        projectKey: 'project-oh-dc1',
+        allocationAliases: ['OH-DC1-CX-001'],
+      }),
+    }
+    expect(resolveAllocationToProjectKey('OH-DC1-MEP-003', cfgs)).toBe('project-oh-dc1')
   })
 })
 

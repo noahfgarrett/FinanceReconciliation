@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.9',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Billing stability & allocation matching
+- Editing project settings (OT threshold, rates) no longer causes billing data to disappear.
+- Allocation codes are now matched by family prefix — e.g. all CARDINAL-* codes automatically resolve to the same project.
+- Recompute safety guards prevent billing rows from regressing to unmapped status during edits.`,
+  },
+  {
     version: '1.4.8',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',
