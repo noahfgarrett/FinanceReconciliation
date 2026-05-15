@@ -282,7 +282,7 @@ export function OnboardingWizard({
   const [projectDrafts, setProjectDrafts] = useState<ProjectDraft[]>(() =>
     newProjects.map((p) => ({
       displayName: p.name,
-      defaultRate: '0',
+      defaultRate: '',
       otThreshold: '40',
       allocations: p.allocations,
     })),

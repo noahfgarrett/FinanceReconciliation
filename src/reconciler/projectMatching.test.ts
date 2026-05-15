@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   slugifyProjectName,
   resolveAllocationToProjectKey,
+  allocFamily,
   buildEmployeeAllocationMap,
 } from './projectMatching'
 import type { ExcelRow, ProjectConfig } from '@/persistence/schemas'
@@ -23,6 +24,23 @@ describe('slugifyProjectName', () => {
   })
 })
 
+describe('allocFamily', () => {
+  it('extracts first segment when >= 3 chars', () => {
+    expect(allocFamily('BRAVO-CX-002')).toBe('bravo')
+    expect(allocFamily('ALPHA-MEP-001')).toBe('alpha')
+    expect(allocFamily('ADMIN-OFC-001')).toBe('admin')
+  })
+  it('joins first two segments when first < 3 chars', () => {
+    expect(allocFamily('CH-DC2-CX-001')).toBe('ch-dc2')
+  })
+  it('handles single segment', () => {
+    expect(allocFamily('BRAVO')).toBe('bravo')
+  })
+  it('returns empty for empty string', () => {
+    expect(allocFamily('')).toBe('')
+  })
+})
+
 describe('resolveAllocationToProjectKey', () => {
   const configs: Record<string, ProjectConfig> = { 'project-acme': cfg() }
 
@@ -34,6 +52,53 @@ describe('resolveAllocationToProjectKey', () => {
   })
   it('returns null when no match', () => {
     expect(resolveAllocationToProjectKey('UNKNOWN-XYZ', configs)).toBeNull()
+  })
+
+  it('resolves via prefix-family when exact match fails', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-bravo': cfg({
+        projectKey: 'project-bravo',
+        displayName: 'Bravo',
+        allocationAliases: ['BRAVO-CX-002'],
+      }),
+    }
+    // BRAVO-PNL-004 shares family "bravo" with the alias BRAVO-CX-002
+    expect(resolveAllocationToProjectKey('BRAVO-PNL-004', cfgs)).toBe('project-bravo')
+  })
+
+  it('returns null when family matches multiple projects', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-a': cfg({
+        projectKey: 'project-a',
+        allocationAliases: ['BRAVO-CX-002'],
+      }),
+      'project-b': cfg({
+        projectKey: 'project-b',
+        allocationAliases: ['BRAVO-QC-001'],
+      }),
+    }
+    // Family "bravo" matches BOTH projects — ambiguous, so null
+    expect(resolveAllocationToProjectKey('BRAVO-PNL-004', cfgs)).toBeNull()
+  })
+
+  it('prefers exact match over family match', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-bravo': cfg({
+        projectKey: 'project-bravo',
+        allocationAliases: ['BRAVO-CX-002', 'BRAVO-PNL-004'],
+      }),
+    }
+    expect(resolveAllocationToProjectKey('BRAVO-PNL-004', cfgs)).toBe('project-bravo')
+  })
+
+  it('resolves short-prefix families correctly', () => {
+    const cfgs: Record<string, ProjectConfig> = {
+      'project-ch-dc2': cfg({
+        projectKey: 'project-ch-dc2',
+        allocationAliases: ['CH-DC2-CX-001'],
+      }),
+    }
+    expect(resolveAllocationToProjectKey('CH-DC2-MEP-003', cfgs)).toBe('project-ch-dc2')
   })
 })
 
