@@ -7,6 +7,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.3',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Folder drag-and-drop
+- Dropping a folder of PDFs onto the import area now works correctly. Previously, only individual files were recognized — folders were silently ignored.`,
+  },
+  {
     version: '1.5.2',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',
