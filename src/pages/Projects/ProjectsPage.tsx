@@ -307,6 +307,7 @@ export default function ProjectsPage(): React.JSX.Element {
       </div>
 
       <ProjectConfigDrawer
+        key={selectedProject?.projectKey ?? '__none'}
         config={selectedProject}
         onClose={() => setSelectedProject(null)}
       />
