@@ -1,4 +1,5 @@
 import { useEffect, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface DrawerProps {
@@ -32,7 +33,7 @@ export function Drawer({ open, onClose, title, children, width = 'lg', footer }:
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in" onClick={onClose} />
       <div
@@ -57,6 +58,7 @@ export function Drawer({ open, onClose, title, children, width = 'lg', footer }:
           <div className="border-t border-slate-800 px-5 py-3 shrink-0 bg-slate-950/40">{footer}</div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

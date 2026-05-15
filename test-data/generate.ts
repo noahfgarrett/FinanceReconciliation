@@ -72,6 +72,206 @@ const WEEKS = [
   { start: '04/27/2026', end: '05/03/2026', isoStart: '2026-04-27' },
 ]
 
+/* ------------------------------------------------------------------ */
+/*  Seeded PRNG & weekly hour distribution                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Simple mulberry32 PRNG — deterministic from a 32-bit seed.
+ * Returns a function that yields floats in [0, 1) on each call.
+ */
+function mulberry32(seed: number): () => number {
+  let s = seed | 0
+  return (): number => {
+    s = (s + 0x6D2B79F5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+interface WeeklyBreakdown {
+  regularHrs: number
+  otHrs: number
+  dtHrs: number
+  /** Per-day regular hours for Mon-Sat (index 0=Mon, 5=Sat). Sunday always 0. */
+  dailyRegHrs: number[]
+  /** Per-day OT hours for the days that have OT. */
+  dailyOtHrs: number[]
+}
+
+/**
+ * Distribute an employee's monthly hours across 4 weeks with realistic variation.
+ *
+ * For normal employees (not stress-test): the monthly totals are treated as targets,
+ * and each week gets a different slice so the sum still matches. Some weeks land above
+ * 40 hrs (triggering OT), some below. Stress-test employees with specific hour totals
+ * that encode deliberate conflicts keep the same uniform split to avoid masking those
+ * conflicts.
+ */
+function distributeMonthlyHours(emp: Employee, empIndex: number): WeeklyBreakdown[] {
+  const rng = mulberry32(empIndex * 7919 + 31337)
+  const isStressTest = !!(
+    emp.pdfHoursDelta ||
+    emp.missingFromPdf ||
+    emp.missingFromExcel ||
+    emp.wrongAllocation ||
+    emp.duplicateWeek ||
+    emp.roundingIssue ||
+    emp.extraOtInPdf ||
+    emp.clientHoursDelta ||
+    emp.dtHrs > 0
+  )
+
+  const weeks: WeeklyBreakdown[] = []
+
+  if (isStressTest) {
+    // Stress-test employees: uniform split to preserve deliberate conflicts
+    for (let w = 0; w < 4; w++) {
+      const weekReg = emp.regularHrs / 4
+      const weekOt = emp.otHrs / 4
+      const weekDt = emp.dtHrs / 4
+      weeks.push({
+        regularHrs: weekReg,
+        otHrs: weekOt,
+        dtHrs: weekDt,
+        dailyRegHrs: buildDailyRegular(weekReg, rng),
+        dailyOtHrs: buildDailyOt(weekOt, rng),
+      })
+    }
+    return weeks
+  }
+
+  // ---- Non-stress employees: generate interesting week-to-week variation ----
+
+  // Step 1: Generate raw weights for each week then scale to hit the monthly total.
+  // Weights are biased so some weeks are heavier than others.
+  const rawWeights = Array.from({ length: 4 }, () => 0.7 + rng() * 0.6) // 0.7 - 1.3
+  const weightSum = rawWeights.reduce((a, b) => a + b, 0)
+
+  // Step 2: Distribute regular hours across weeks.
+  let remainingMonthlyOt = emp.otHrs
+  const weeklyRegRaw = rawWeights.map(w => +(emp.regularHrs * w / weightSum).toFixed(1))
+
+  // Fix rounding so monthly total is exact
+  const regSum = weeklyRegRaw.reduce((a, b) => a + b, 0)
+  weeklyRegRaw[3] = +(weeklyRegRaw[3] + (emp.regularHrs - regSum)).toFixed(1)
+
+  for (let w = 0; w < 4; w++) {
+    let weekReg = weeklyRegRaw[w]
+    let weekOt = 0
+
+    // If this employee has monthly OT, distribute it unevenly across weeks
+    if (emp.otHrs > 0) {
+      // Heavier weeks get more OT
+      if (w < 3) {
+        const otShare = +(emp.otHrs * rawWeights[w] / weightSum).toFixed(1)
+        weekOt = Math.min(otShare, remainingMonthlyOt)
+        remainingMonthlyOt = +(remainingMonthlyOt - weekOt).toFixed(1)
+      } else {
+        // Last week gets whatever OT remains
+        weekOt = +remainingMonthlyOt.toFixed(1)
+      }
+    }
+
+    // Clamp: regular hours for a week shouldn't exceed 60 or go below 20
+    // (unless the employee is part-time with low monthly totals)
+    const minWeekly = Math.min(20, emp.regularHrs / 4)
+    weekReg = Math.max(minWeekly, Math.min(60, weekReg))
+
+    weeks.push({
+      regularHrs: +weekReg.toFixed(1),
+      otHrs: +weekOt.toFixed(1),
+      dtHrs: 0,
+      dailyRegHrs: buildDailyRegular(weekReg, rng),
+      dailyOtHrs: buildDailyOt(weekOt, rng),
+    })
+  }
+
+  // Final fixup: ensure monthly totals are exact
+  const actualRegTotal = weeks.reduce((s, w) => s + w.regularHrs, 0)
+  const regDiff = +(emp.regularHrs - actualRegTotal).toFixed(1)
+  if (Math.abs(regDiff) > 0.05) {
+    weeks[3].regularHrs = +(weeks[3].regularHrs + regDiff).toFixed(1)
+    weeks[3].dailyRegHrs = buildDailyRegular(weeks[3].regularHrs, rng)
+  }
+
+  const actualOtTotal = weeks.reduce((s, w) => s + w.otHrs, 0)
+  const otDiff = +(emp.otHrs - actualOtTotal).toFixed(1)
+  if (Math.abs(otDiff) > 0.05) {
+    weeks[3].otHrs = +(weeks[3].otHrs + otDiff).toFixed(1)
+    weeks[3].dailyOtHrs = buildDailyOt(weeks[3].otHrs, rng)
+  }
+
+  return weeks
+}
+
+/**
+ * Build realistic daily regular-hour breakdown for a week.
+ * Weekdays get 7-10 hrs, Saturday gets 0-4 hrs if needed to hit the target.
+ */
+function buildDailyRegular(weekTotal: number, rng: () => number): number[] {
+  if (weekTotal <= 0) return [0, 0, 0, 0, 0, 0]
+
+  const daily: number[] = []
+  let remaining = weekTotal
+
+  // Weekdays (Mon-Fri): each gets a share of the total
+  const weekdayTarget = Math.min(remaining, weekTotal * (rng() * 0.05 + 0.95)) // 95-100% on weekdays
+  for (let d = 0; d < 5; d++) {
+    if (d < 4) {
+      // Vary each day: base of weekTotal/5, jittered ±1.5 hrs
+      const base = weekdayTarget / 5
+      const jitter = (rng() - 0.5) * 3
+      const hrs = Math.max(0, Math.min(12, base + jitter))
+      daily.push(+hrs.toFixed(1))
+      remaining = +(remaining - daily[d]).toFixed(1)
+    } else {
+      // Friday gets whatever is left for the weekday portion
+      const fri = Math.max(0, Math.min(12, remaining))
+      daily.push(+fri.toFixed(1))
+      remaining = +(remaining - daily[4]).toFixed(1)
+    }
+  }
+
+  // Saturday: absorb any leftover (capped at 6 hrs)
+  const sat = Math.max(0, Math.min(6, remaining))
+  daily.push(+sat.toFixed(1))
+
+  return daily
+}
+
+/**
+ * Build daily OT breakdown for a week. OT spreads across 1-3 days.
+ */
+function buildDailyOt(weekOt: number, rng: () => number): number[] {
+  if (weekOt <= 0) return []
+
+  const otDays = Math.min(Math.max(1, Math.ceil(weekOt / 4)), 5)
+  const daily: number[] = []
+  let remaining = weekOt
+
+  for (let d = 0; d < otDays; d++) {
+    if (d < otDays - 1) {
+      const share = +(remaining / (otDays - d) + (rng() - 0.5) * 2).toFixed(1)
+      const hrs = Math.max(1, Math.min(remaining - (otDays - d - 1), share))
+      daily.push(+hrs.toFixed(1))
+      remaining = +(remaining - daily[d]).toFixed(1)
+    } else {
+      daily.push(+Math.max(0, remaining).toFixed(1))
+    }
+  }
+
+  return daily
+}
+
+/**
+ * Pre-computed weekly breakdowns for every employee. Keyed by employee code.
+ * Populated once in main() before any generators run, so PDF and client invoice
+ * generators use the same per-week numbers.
+ */
+const WEEKLY_DATA: Record<string, WeeklyBreakdown[]> = {}
+
 const EMPLOYEES: Employee[] = [
   // --- Normal employees (no conflicts) ---
   { code: '2000', firstName: 'Noah', lastName: 'Garrett', project: 'fab52', projectAlloc: 'FAB52-MEP-001', regularHrs: 160, otHrs: 24, dtHrs: 0 },
@@ -261,28 +461,31 @@ async function generatePdf(emp: Employee): Promise<Uint8Array> {
     y -= 12
 
     const weekIdx = WEEKS.indexOf(week)
-    const weekRegHrs = emp.regularHrs / 4
-    const weekOtHrs = emp.otHrs / 4
-    const weekDtHrs = emp.dtHrs / 4
+    const wb = WEEKLY_DATA[emp.code][weekIdx]
 
     // Compute actual PDF hours (with deltas for stress tests)
-    let pdfRegHrs = weekRegHrs
+    let pdfRegHrs = wb.regularHrs
     if (emp.pdfHoursDelta) pdfRegHrs += emp.pdfHoursDelta / 4
     if (emp.roundingIssue) pdfRegHrs += 0.25
 
-    let pdfOtHrs = weekOtHrs
+    let pdfOtHrs = wb.otHrs
     if (emp.extraOtInPdf) pdfOtHrs += emp.extraOtInPdf / 4
 
     const alloc = emp.wrongAllocation ?? emp.projectAlloc
-    const daysInWeek = Math.ceil(pdfRegHrs / 8) || 5
-    const hrsPerDay = pdfRegHrs / daysInWeek
 
-    // Regular entries
-    for (let d = 0; d < daysInWeek; d++) {
+    // Regular entries — use daily breakdown for realistic per-day variation
+    const regDaily = wb.dailyRegHrs
+    for (let d = 0; d < regDaily.length; d++) {
+      let hrs = regDaily[d]
+      if (hrs <= 0) continue
+
+      // Apply stress-test delta proportionally across days
+      if (emp.pdfHoursDelta || emp.roundingIssue) {
+        const ratio = pdfRegHrs / wb.regularHrs
+        hrs = +(hrs * ratio).toFixed(2)
+      }
+
       const dateStr = addDays(week.start, d)
-      const hrs = d === daysInWeek - 1
-        ? +(pdfRegHrs - hrsPerDay * (daysInWeek - 1)).toFixed(2)
-        : +hrsPerDay.toFixed(2)
       const dollars = rate > 0 ? `$${(hrs * rate).toFixed(2)}` : '$0.00'
 
       drawText(dateStr, COLS.date, y, 8)
@@ -296,17 +499,25 @@ async function generatePdf(emp: Employee): Promise<Uint8Array> {
       y -= 12
     }
 
-    // OT entries
+    // OT entries — use daily OT breakdown
     if (pdfOtHrs > 0) {
-      const otDays = Math.ceil(pdfOtHrs / 4) || 1
-      const otPerDay = pdfOtHrs / otDays
-      for (let d = 0; d < otDays; d++) {
+      const otDaily = wb.dailyOtHrs
+      for (let d = 0; d < otDaily.length; d++) {
+        let hrs = otDaily[d]
+        if (hrs <= 0) continue
+
+        // Apply stress-test OT delta proportionally
+        if (emp.extraOtInPdf && wb.otHrs > 0) {
+          const ratio = pdfOtHrs / wb.otHrs
+          hrs = +(hrs * ratio).toFixed(2)
+        } else if (emp.extraOtInPdf && wb.otHrs === 0) {
+          // Employee has no base OT — extra OT is purely from the stress test
+          hrs = +(pdfOtHrs / Math.max(1, otDaily.length)).toFixed(2)
+        }
+
         const dateNum = parseInt(week.start.split('/')[1]) + d
         const month = week.start.split('/')[0]
         const dateStr = `${month}/${String(dateNum).padStart(2, '0')}/2026`
-        const hrs = d === otDays - 1
-          ? +(pdfOtHrs - otPerDay * (otDays - 1)).toFixed(2)
-          : +otPerDay.toFixed(2)
         const dollars = rate > 0 ? `$${(hrs * rate * 1.5).toFixed(2)}` : '$0.00'
 
         drawText(dateStr, COLS.date, y, 8)
@@ -319,12 +530,28 @@ async function generatePdf(emp: Employee): Promise<Uint8Array> {
         drawText(hrs.toFixed(1), COLS.totalHrs, y, 8)
         y -= 12
       }
+
+      // If base OT was 0 but stress test adds OT, and dailyOtHrs is empty,
+      // add the extra OT as a single entry
+      if (otDaily.length === 0 && pdfOtHrs > 0) {
+        const dateStr = addDays(week.start, 0)
+        const dollars = rate > 0 ? `$${(pdfOtHrs * rate * 1.5).toFixed(2)}` : '$0.00'
+        drawText(dateStr, COLS.date, y, 8)
+        drawText('OT', COLS.payCode, y, 8)
+        drawText('15:30', COLS.inTime, y, 8)
+        drawText('19:30', COLS.outTime, y, 8)
+        drawText(alloc, COLS.allocation, y, 8)
+        drawText('OH-NRES', COLS.taxProfile, y, 8)
+        drawText(dollars, COLS.dollars, y, 8)
+        drawText(pdfOtHrs.toFixed(1), COLS.totalHrs, y, 8)
+        y -= 12
+      }
     }
 
     // DT entries
-    if (weekDtHrs > 0) {
+    if (wb.dtHrs > 0) {
       const dateStr = addDays(week.start, 6)
-      const dollars = rate > 0 ? `$${(weekDtHrs * rate * 2).toFixed(2)}` : '$0.00'
+      const dollars = rate > 0 ? `$${(wb.dtHrs * rate * 2).toFixed(2)}` : '$0.00'
       drawText(dateStr, COLS.date, y, 8)
       drawText('DT', COLS.payCode, y, 8)
       drawText('06:00', COLS.inTime, y, 8)
@@ -332,7 +559,7 @@ async function generatePdf(emp: Employee): Promise<Uint8Array> {
       drawText(alloc, COLS.allocation, y, 8)
       drawText('OH-NRES', COLS.taxProfile, y, 8)
       drawText(dollars, COLS.dollars, y, 8)
-      drawText(weekDtHrs.toFixed(1), COLS.totalHrs, y, 8)
+      drawText(wb.dtHrs.toFixed(1), COLS.totalHrs, y, 8)
       y -= 12
     }
 
@@ -359,10 +586,10 @@ async function generatePdf(emp: Employee): Promise<Uint8Array> {
     }
 
     // Weekly total
-    const totalHrs = pdfRegHrs + pdfOtHrs + weekDtHrs
+    const totalHrs = pdfRegHrs + pdfOtHrs + wb.dtHrs
       + (emp.duplicateWeek && weekIdx === 1 ? 40 : 0)
     const totalDollars = rate > 0
-      ? pdfRegHrs * rate + pdfOtHrs * rate * 1.5 + weekDtHrs * rate * 2
+      ? pdfRegHrs * rate + pdfOtHrs * rate * 1.5 + wb.dtHrs * rate * 2
         + (emp.duplicateWeek && weekIdx === 1 ? 40 * rate : 0)
       : 0
 
@@ -419,12 +646,12 @@ async function generateClientInvoice(): Promise<void> {
     const projEmployees = EMPLOYEES.filter(e => e.project === key && !e.missingFromExcel)
 
     for (const emp of projEmployees) {
-      for (const week of WEEKS) {
-        const weekReg = emp.regularHrs / 4
-        const weekOt = emp.otHrs / 4
+      for (let wi = 0; wi < WEEKS.length; wi++) {
+        const week = WEEKS[wi]
+        const weekData = WEEKLY_DATA[emp.code][wi]
 
-        let clientReg = weekReg
-        let clientOt = weekOt
+        let clientReg = weekData.regularHrs
+        let clientOt = weekData.otHrs
         let note = ''
 
         // Apply client-side deltas
@@ -472,6 +699,24 @@ async function main(): Promise<void> {
   if (!existsSync(PDF_DIR)) mkdirSync(PDF_DIR, { recursive: true })
 
   console.log('Generating test data...\n')
+
+  // Pre-compute weekly hour distributions for all employees (seeded, deterministic)
+  for (let i = 0; i < EMPLOYEES.length; i++) {
+    const emp = EMPLOYEES[i]
+    WEEKLY_DATA[emp.code] = distributeMonthlyHours(emp, i)
+  }
+
+  // Log a sample to show variation
+  console.log('  Weekly hour variation (sample — first 5 non-stress employees):')
+  for (let i = 0; i < 5; i++) {
+    const emp = EMPLOYEES[i]
+    const weeks = WEEKLY_DATA[emp.code]
+    const weekStr = weeks
+      .map((w, wi) => `W${wi + 1}: ${w.regularHrs}r/${w.otHrs}ot`)
+      .join('  ')
+    console.log(`    ${emp.firstName} ${emp.lastName}: ${weekStr}`)
+  }
+  console.log()
 
   await generatePaycomExcel()
   await generateAllPdfs()

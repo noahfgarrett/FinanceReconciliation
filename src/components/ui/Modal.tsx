@@ -1,4 +1,5 @@
 import { useEffect, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -35,7 +36,7 @@ export function Modal({ open, onClose, title, children, width = 'md' }: ModalPro
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
@@ -68,6 +69,7 @@ export function Modal({ open, onClose, title, children, width = 'md' }: ModalPro
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

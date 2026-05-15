@@ -5,16 +5,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import type { ProjectConfig, EmployeeProfile } from '@/persistence/schemas'
+import type { DetectedProject } from '@/components/ImportFlow'
 import { slugifyProjectName } from '@/reconciler/projectMatching'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface NewProject {
-  name: string
-  allocations: string[]
-}
 
 interface NewEmployee {
   code: string
@@ -29,7 +25,8 @@ export interface OnboardingWizardProps {
     employees: EmployeeProfile[]
   }) => void
   onCancel: () => void
-  newProjects: NewProject[]
+  /** All projects found in the Excel — both new and already-configured */
+  allProjects: DetectedProject[]
   newEmployees: NewEmployee[]
   existingProjects: Record<string, ProjectConfig>
   /** Maps employee code → project names they appear on in the Excel data */
@@ -45,6 +42,7 @@ interface ProjectDraft {
   defaultRate: string      // kept as string for controlled input
   otThreshold: string
   allocations: string[]
+  isNew: boolean
 }
 
 interface EmployeeDraft {
@@ -266,25 +264,27 @@ export function OnboardingWizard({
   open,
   onComplete,
   onCancel,
-  newProjects,
+  allProjects,
   newEmployees,
   existingProjects,
   employeeProjectMap = {},
 }: OnboardingWizardProps): React.JSX.Element | null {
-  const hasProjects = newProjects.length > 0
+  const hasNewProjects = allProjects.some((p) => p.isNew)
+  const hasProjects = allProjects.length > 0
   const hasEmployees = newEmployees.length > 0
 
-  // Determine which steps are relevant
+  // Determine which steps are relevant — show projects step if any projects exist
   const initialStep = hasProjects ? 0 : hasEmployees ? 1 : 2
 
   const [step, setStep] = useState(initialStep)
 
   const [projectDrafts, setProjectDrafts] = useState<ProjectDraft[]>(() =>
-    newProjects.map((p) => ({
-      displayName: p.name,
-      defaultRate: '',
-      otThreshold: '40',
-      allocations: p.allocations,
+    allProjects.map((p) => ({
+      displayName: p.existingConfig?.displayName ?? p.name,
+      defaultRate: p.existingConfig ? String(p.existingConfig.defaultRegularRate) : '',
+      otThreshold: p.existingConfig ? String(p.existingConfig.otThresholdHrs) : '40',
+      allocations: p.existingConfig?.allocationAliases ?? p.allocations,
+      isNew: p.isNew,
     })),
   )
 
@@ -399,18 +399,21 @@ export function OnboardingWizard({
     employees: EmployeeProfile[]
   } => {
     const now = new Date().toISOString()
-    const projects: ProjectConfig[] = projectDrafts.map((d) => {
-      const key = slugifyProjectName(d.displayName)
-      return {
-        projectKey: key,
-        displayName: d.displayName.trim() || d.displayName,
-        allocationAliases: d.allocations,
-        otThresholdHrs: parseThreshold(d.otThreshold),
-        includeDoubleTime: false,
-        defaultRegularRate: parseRate(d.defaultRate),
-        employeeRateOverrides: {},
-      }
-    })
+    // Only emit configs for NEW projects — existing ones are already persisted
+    const projects: ProjectConfig[] = projectDrafts
+      .filter((d) => d.isNew)
+      .map((d) => {
+        const key = slugifyProjectName(d.displayName)
+        return {
+          projectKey: key,
+          displayName: d.displayName.trim() || d.displayName,
+          allocationAliases: d.allocations,
+          otThresholdHrs: parseThreshold(d.otThreshold),
+          includeDoubleTime: false,
+          defaultRegularRate: parseRate(d.defaultRate),
+          employeeRateOverrides: {},
+        }
+      })
 
     const employees: EmployeeProfile[] = employeeDrafts.map((d) => ({
       code: d.code,
@@ -457,12 +460,15 @@ export function OnboardingWizard({
       <div data-testid="onboarding-wizard" className="flex flex-col">
         <StepIndicator current={step} />
 
-        {/* ---- Step 0: New Projects ---- */}
+        {/* ---- Step 0: Projects ---- */}
         {step === 0 && (
           <div className="px-5 py-4 flex flex-col gap-4 max-h-[60vh] overflow-hidden">
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {newProjects.length} new project{newProjects.length !== 1 ? 's' : ''} detected.
-              Configure billing defaults for each one.
+              {allProjects.length} project{allProjects.length !== 1 ? 's' : ''} found in Excel
+              {hasNewProjects
+                ? ` — ${allProjects.filter((p) => p.isNew).length} new, ${allProjects.filter((p) => !p.isNew).length} already configured.`
+                : '.'}
+              {hasNewProjects ? ' Configure billing defaults for new projects.' : ''}
             </p>
 
             <div
@@ -473,59 +479,110 @@ export function OnboardingWizard({
                 <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--surface-elevated)' }}>
                   <tr className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     <th className="text-left px-3 py-2 font-medium">Display Name</th>
+                    <th className="text-left px-3 py-2 font-medium w-20">Status</th>
                     <th className="text-left px-3 py-2 font-medium w-32">Bill Rate ($)</th>
                     <th className="text-left px-3 py-2 font-medium w-32">OT Threshold</th>
                     <th className="text-left px-3 py-2 font-medium w-48">Allocation Codes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
-                  {projectDrafts.map((draft, idx) => (
-                    <tr key={newProjects[idx].name} style={{ backgroundColor: 'var(--surface-subtle)' }}>
-                      <td className="px-3 py-2">
-                        <Input
-                          value={draft.displayName}
-                          onChange={(e) => updateProject(idx, 'displayName', e.target.value)}
-                          placeholder="Project name"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <NumberInput
-                          value={draft.defaultRate}
-                          onChange={(e) => updateProject(idx, 'defaultRate', e.target.value)}
-                          placeholder="0"
-                          min={0}
-                          suffix="$/hr"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <NumberInput
-                          value={draft.otThreshold}
-                          onChange={(e) => updateProject(idx, 'otThreshold', e.target.value)}
-                          placeholder="40"
-                          min={1}
-                          max={168}
-                          suffix="hrs"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        {draft.allocations.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {draft.allocations.map((a) => (
-                              <span
-                                key={a}
-                                className="inline-flex px-1.5 py-0.5 rounded text-xs font-mono"
-                                style={{ backgroundColor: 'var(--surface-interactive)', color: 'var(--text-secondary)' }}
-                              >
-                                {a}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>None matched</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {projectDrafts.map((draft, idx) => {
+                    const isExisting = !draft.isNew
+                    return (
+                      <tr
+                        key={allProjects[idx].name}
+                        style={{
+                          backgroundColor: 'var(--surface-subtle)',
+                          opacity: isExisting ? 0.7 : 1,
+                        }}
+                      >
+                        <td className="px-3 py-2">
+                          {isExisting ? (
+                            <span className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+                              {draft.displayName}
+                            </span>
+                          ) : (
+                            <Input
+                              value={draft.displayName}
+                              onChange={(e) => updateProject(idx, 'displayName', e.target.value)}
+                              placeholder="Project name"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isExisting ? (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap"
+                              style={{
+                                backgroundColor: 'var(--surface-interactive)',
+                                color: 'var(--text-muted)',
+                              }}
+                            >
+                              Configured
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap"
+                              style={{
+                                backgroundColor: 'var(--brand-orange-500)',
+                                color: 'white',
+                              }}
+                            >
+                              New
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isExisting ? (
+                            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                              ${draft.defaultRate}/hr
+                            </span>
+                          ) : (
+                            <NumberInput
+                              value={draft.defaultRate}
+                              onChange={(e) => updateProject(idx, 'defaultRate', e.target.value)}
+                              placeholder="0"
+                              min={0}
+                              suffix="$/hr"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isExisting ? (
+                            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                              {draft.otThreshold} hrs
+                            </span>
+                          ) : (
+                            <NumberInput
+                              value={draft.otThreshold}
+                              onChange={(e) => updateProject(idx, 'otThreshold', e.target.value)}
+                              placeholder="40"
+                              min={1}
+                              max={168}
+                              suffix="hrs"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {draft.allocations.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {draft.allocations.map((a) => (
+                                <span
+                                  key={a}
+                                  className="inline-flex px-1.5 py-0.5 rounded text-xs font-mono"
+                                  style={{ backgroundColor: 'var(--surface-interactive)', color: 'var(--text-secondary)' }}
+                                >
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>None matched</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -556,7 +613,10 @@ export function OnboardingWizard({
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-lw-orange-400" />
                   <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {builtProjects.length} project{builtProjects.length !== 1 ? 's' : ''} configured
+                    {builtProjects.length} new project{builtProjects.length !== 1 ? 's' : ''}{' '}
+                    {projectDrafts.length - builtProjects.length > 0
+                      ? `(+ ${projectDrafts.length - builtProjects.length} existing)`
+                      : ''}
                   </h3>
                 </div>
                 {builtProjects.length > 0 && (
@@ -580,7 +640,7 @@ export function OnboardingWizard({
                   </div>
                 )}
                 {builtProjects.length === 0 && (
-                  <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>No new projects</span>
+                  <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>No new projects — all already configured</span>
                 )}
               </div>
 

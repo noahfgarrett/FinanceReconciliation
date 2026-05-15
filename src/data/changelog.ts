@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.1',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Import wizard & UI stability
+- The Clear Data button in Settings now works reliably — the confirmation modal no longer gets trapped behind the page.
+- The import wizard now detects all projects from Excel, not just new ones. Existing projects are shown as pre-configured.
+- You can now drop the Excel file and PDF folder at the same time — no need to drop them one at a time.
+- Drawers and modals render correctly regardless of page scroll position.`,
+  },
+  {
     version: '1.5.0',
     date: '2026-05-15T00:00:00Z',
     type: 'major',
