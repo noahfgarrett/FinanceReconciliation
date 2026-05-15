@@ -76,9 +76,8 @@ function StepIndicator({ current }: { current: number }): React.JSX.Element {
           <div key={step.label} className="flex items-center gap-2">
             {idx > 0 && (
               <div
-                className={`h-px w-8 transition-colors ${
-                  isDone ? 'bg-lw-orange-500' : 'bg-slate-700'
-                }`}
+                className="h-px w-8 transition-colors"
+                style={{ backgroundColor: isDone ? 'var(--brand-orange-500)' : 'var(--border-emphasis)' }}
               />
             )}
             <div className="flex items-center gap-1.5">
@@ -88,8 +87,9 @@ function StepIndicator({ current }: { current: number }): React.JSX.Element {
                     ? 'bg-lw-orange-500 text-white'
                     : isDone
                       ? 'bg-lw-orange-500/20 text-lw-orange-400'
-                      : 'bg-slate-800 text-slate-500'
+                      : ''
                 }`}
+                style={!isActive && !isDone ? { backgroundColor: 'var(--surface-interactive)', color: 'var(--text-muted)' } : undefined}
               >
                 {isDone ? (
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -98,9 +98,8 @@ function StepIndicator({ current }: { current: number }): React.JSX.Element {
                 )}
               </div>
               <span
-                className={`text-xs font-medium transition-colors ${
-                  isActive ? 'text-slate-100' : isDone ? 'text-slate-400' : 'text-slate-600'
-                }`}
+                className="text-xs font-medium transition-colors"
+                style={{ color: isActive ? 'var(--text-primary)' : isDone ? 'var(--text-muted)' : 'var(--text-faint)' }}
               >
                 {step.label} ({idx + 1}/3)
               </span>
@@ -173,48 +172,56 @@ function EmployeeStep({
   return (
     <div className="px-5 py-4 flex flex-col gap-3 max-h-[60vh] overflow-hidden">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
           {employeeDrafts.length} new employee{employeeDrafts.length !== 1 ? 's' : ''} detected.
           Rates are pre-filled from each employee&apos;s project.
         </p>
         <div className="relative shrink-0 w-52">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
             value={empSearch}
             onChange={(e) => setEmpSearch(e.target.value)}
             placeholder="Filter by name or project…"
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-lw-orange-500/60"
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg focus:outline-none focus:border-lw-orange-500/60"
+            style={{
+              backgroundColor: 'var(--surface-elevated)',
+              border: '1px solid var(--border-emphasis)',
+              color: 'var(--text-primary)',
+            }}
           />
         </div>
       </div>
 
-      <div className="border border-slate-800 rounded-lg overflow-hidden flex-1 overflow-y-auto">
+      <div
+        className="rounded-lg overflow-hidden flex-1 overflow-y-auto"
+        style={{ border: '1px solid var(--border-default)' }}
+      >
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10">
-            <tr className="text-slate-400 text-xs">
+          <thead className="sticky top-0 backdrop-blur-sm z-10" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+            <tr className="text-xs" style={{ color: 'var(--text-muted)' }}>
               <th className="text-left px-3 py-1.5 font-medium w-16">Code</th>
               <th className="text-left px-3 py-1.5 font-medium">Name</th>
               <th className="text-left px-3 py-1.5 font-medium">Project</th>
-              <th className="text-left px-3 py-1.5 font-medium w-24">Rate ($)</th>
-              <th className="text-left px-3 py-1.5 font-medium w-36">Job Title</th>
+              <th className="text-left px-3 py-1.5 font-medium w-32">Rate ($)</th>
+              <th className="text-left px-3 py-1.5 font-medium min-w-[180px]">Job Title</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
             {filteredIndices.map((idx) => {
               const draft = employeeDrafts[idx]
               return (
-                <tr key={draft.code} className="bg-slate-950/30">
+                <tr key={draft.code} style={{ backgroundColor: 'var(--surface-subtle)' }}>
                   <td className="px-3 py-1.5">
-                    <span className="font-mono text-[11px] text-slate-500">{draft.code}</span>
+                    <span className="font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>{draft.code}</span>
                   </td>
                   <td className="px-3 py-1.5">
-                    <span className="text-[13px] text-slate-200">
+                    <span className="text-[13px]" style={{ color: 'var(--text-primary)' }}>
                       {draft.firstName} {draft.lastName}
                     </span>
                   </td>
                   <td className="px-3 py-1.5">
-                    <span className="text-xs text-slate-500 truncate block max-w-[160px]">
+                    <span className="text-xs truncate block max-w-[160px]" style={{ color: 'var(--text-muted)' }}>
                       {projectLabel(draft.code)}
                     </span>
                   </td>
@@ -239,7 +246,7 @@ function EmployeeStep({
             })}
             {filteredIndices.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-slate-600">
+                <td colSpan={5} className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-faint)' }}>
                   No employees match &ldquo;{empSearch}&rdquo;
                 </td>
               </tr>
@@ -452,25 +459,28 @@ export function OnboardingWizard({
 
         {/* ---- Step 0: New Projects ---- */}
         {step === 0 && (
-          <div className="px-5 py-4 flex flex-col gap-4 max-h-[60vh] overflow-y-auto">
-            <p className="text-sm text-slate-400">
+          <div className="px-5 py-4 flex flex-col gap-4 max-h-[60vh] overflow-hidden">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {newProjects.length} new project{newProjects.length !== 1 ? 's' : ''} detected.
               Configure billing defaults for each one.
             </p>
 
-            <div className="border border-slate-800 rounded-lg overflow-hidden">
+            <div
+              className="rounded-lg overflow-hidden flex-1 overflow-y-auto"
+              style={{ border: '1px solid var(--border-default)' }}
+            >
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-900/50 text-slate-400 text-xs">
+                <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                  <tr className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     <th className="text-left px-3 py-2 font-medium">Display Name</th>
-                    <th className="text-left px-3 py-2 font-medium w-28">Bill Rate ($)</th>
-                    <th className="text-left px-3 py-2 font-medium w-28">OT Threshold</th>
+                    <th className="text-left px-3 py-2 font-medium w-32">Bill Rate ($)</th>
+                    <th className="text-left px-3 py-2 font-medium w-32">OT Threshold</th>
                     <th className="text-left px-3 py-2 font-medium w-48">Allocation Codes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
                   {projectDrafts.map((draft, idx) => (
-                    <tr key={newProjects[idx].name} className="bg-slate-950/30">
+                    <tr key={newProjects[idx].name} style={{ backgroundColor: 'var(--surface-subtle)' }}>
                       <td className="px-3 py-2">
                         <Input
                           value={draft.displayName}
@@ -503,14 +513,15 @@ export function OnboardingWizard({
                             {draft.allocations.map((a) => (
                               <span
                                 key={a}
-                                className="inline-flex px-1.5 py-0.5 rounded bg-slate-800 text-xs text-slate-300 font-mono"
+                                className="inline-flex px-1.5 py-0.5 rounded text-xs font-mono"
+                                style={{ backgroundColor: 'var(--surface-interactive)', color: 'var(--text-secondary)' }}
                               >
                                 {a}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-600 italic">None matched</span>
+                          <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>None matched</span>
                         )}
                       </td>
                     </tr>
@@ -535,16 +546,16 @@ export function OnboardingWizard({
         {/* ---- Step 2: Review ---- */}
         {step === 2 && (
           <div className="px-5 py-4 flex flex-col gap-4 max-h-[60vh] overflow-y-auto">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Review the configuration before importing.
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Projects summary */}
-              <div className="border border-slate-800 rounded-lg p-4 flex flex-col gap-2">
+              <div className="rounded-lg p-4 flex flex-col gap-2" style={{ border: '1px solid var(--border-default)' }}>
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-lw-orange-400" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                     {builtProjects.length} project{builtProjects.length !== 1 ? 's' : ''} configured
                   </h3>
                 </div>
@@ -555,29 +566,29 @@ export function OnboardingWizard({
                         key={p.projectKey}
                         className="flex items-center justify-between text-xs"
                       >
-                        <span className="text-slate-300 truncate">{p.displayName}</span>
-                        <span className="text-slate-500 shrink-0 ml-2">
+                        <span className="truncate" style={{ color: 'var(--text-secondary)' }}>{p.displayName}</span>
+                        <span className="shrink-0 ml-2" style={{ color: 'var(--text-muted)' }}>
                           ${p.defaultRegularRate}/hr &middot; {p.otThresholdHrs}hr OT
                         </span>
                       </div>
                     ))}
                     {builtProjects.length > 5 && (
-                      <span className="text-xs text-slate-600">
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
                         and {builtProjects.length - 5} more...
                       </span>
                     )}
                   </div>
                 )}
                 {builtProjects.length === 0 && (
-                  <span className="text-xs text-slate-600 italic">No new projects</span>
+                  <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>No new projects</span>
                 )}
               </div>
 
               {/* Employees summary */}
-              <div className="border border-slate-800 rounded-lg p-4 flex flex-col gap-2">
+              <div className="rounded-lg p-4 flex flex-col gap-2" style={{ border: '1px solid var(--border-default)' }}>
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-lw-orange-400" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                     {builtEmployees.length} employee profile{builtEmployees.length !== 1 ? 's' : ''} created
                   </h3>
                 </div>
@@ -588,36 +599,35 @@ export function OnboardingWizard({
                         key={e.code}
                         className="flex items-center justify-between text-xs"
                       >
-                        <span className="text-slate-300 truncate">
+                        <span className="truncate" style={{ color: 'var(--text-secondary)' }}>
                           {e.firstName} {e.lastName}
                         </span>
-                        <span className="text-slate-500 shrink-0 ml-2">
+                        <span className="shrink-0 ml-2" style={{ color: 'var(--text-muted)' }}>
                           ${e.defaultBillRate}/hr
                           {e.jobTitle ? ` · ${e.jobTitle}` : ''}
                         </span>
                       </div>
                     ))}
                     {builtEmployees.length > 5 && (
-                      <span className="text-xs text-slate-600">
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
                         and {builtEmployees.length - 5} more...
                       </span>
                     )}
                   </div>
                 )}
                 {builtEmployees.length === 0 && (
-                  <span className="text-xs text-slate-600 italic">No new employees</span>
+                  <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>No new employees</span>
                 )}
               </div>
             </div>
 
             {/* Rate cascade preview */}
             {builtProjects.length > 0 && builtEmployees.length > 0 && (
-              <div className="border border-slate-800 rounded-lg p-4">
-                <h4 className="text-xs font-medium text-slate-400 mb-2">Rate Cascade Preview</h4>
+              <div className="rounded-lg p-4" style={{ border: '1px solid var(--border-default)' }}>
+                <h4 className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Rate Cascade Preview</h4>
                 <div className="flex flex-col gap-1">
                   {builtProjects.slice(0, 3).map((proj) => {
                     const emp = builtEmployees[0]
-                    // Check if existing project has an override for this employee
                     const existingCfg = existingProjects[proj.projectKey]
                     const override = existingCfg?.employeeRateOverrides[emp.code]
                     const effectiveRate =
@@ -628,12 +638,13 @@ export function OnboardingWizard({
                     return (
                       <div
                         key={proj.projectKey}
-                        className="flex items-center gap-2 text-xs text-slate-400"
+                        className="flex items-center gap-2 text-xs"
+                        style={{ color: 'var(--text-muted)' }}
                       >
-                        <span className="text-slate-300 font-medium">{emp.firstName} {emp.lastName}</span>
-                        <span className="text-slate-600">&rarr;</span>
-                        <span className="text-slate-300">{proj.displayName}</span>
-                        <span className="text-slate-600">=</span>
+                        <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{emp.firstName} {emp.lastName}</span>
+                        <span style={{ color: 'var(--text-faint)' }}>&rarr;</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{proj.displayName}</span>
+                        <span style={{ color: 'var(--text-faint)' }}>=</span>
                         <span className="text-lw-orange-400 font-mono">${effectiveRate}/hr</span>
                       </div>
                     )
@@ -645,7 +656,7 @@ export function OnboardingWizard({
         )}
 
         {/* ---- Footer ---- */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
           <div>
             {step === 0 && (
               <Button variant="ghost" size="sm" onClick={skipProjects}>
