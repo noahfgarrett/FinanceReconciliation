@@ -1,5 +1,9 @@
 import type { ExcelParseResult } from './excelParser'
 
+// Vite's `?worker&inline` bundles the worker source into a blob URL so the
+// single-file build works from file:// without a separate .js file.
+import ExcelWorkerConstructor from './workers/excel.worker.ts?worker&inline'
+
 interface WorkerResponse {
   ok: boolean
   result?: ExcelParseResult
@@ -8,10 +12,7 @@ interface WorkerResponse {
 
 export function runExcelInWorker(buffer: ArrayBuffer): Promise<ExcelParseResult> {
   return new Promise((resolveP, rejectP) => {
-    const worker = new Worker(
-      new URL('./workers/excel.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
+    const worker: Worker = new ExcelWorkerConstructor()
     worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
       worker.terminate()
       if (e.data.ok && e.data.result) {
