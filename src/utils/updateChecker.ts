@@ -4,6 +4,9 @@ const GITHUB_API_URL =
   'https://api.github.com/repos/noahfgarrett/FinanceReconciliation/releases/latest'
 const TIMEOUT_MS = 5000
 
+/** Module-level guard — only allow one version check per page load. */
+let checkPromise: Promise<UpdateInfo | null> | null = null
+
 export interface UpdateInfo {
   version: string
   releaseNotes: string
@@ -29,8 +32,15 @@ interface GitHubRelease {
  * Check GitHub Releases for a newer version.
  * Returns update info if a newer version exists, null otherwise.
  * Silently returns null on any error — never blocks the app.
+ * Deduped: concurrent/repeated calls share the same in-flight request.
  */
-export async function checkForUpdate(): Promise<UpdateInfo | null> {
+export function checkForUpdate(): Promise<UpdateInfo | null> {
+  if (checkPromise) return checkPromise
+  checkPromise = doCheck()
+  return checkPromise
+}
+
+async function doCheck(): Promise<UpdateInfo | null> {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)

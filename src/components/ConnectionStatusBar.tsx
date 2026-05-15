@@ -71,21 +71,20 @@ export function ConnectionStatusBar(): React.ReactElement {
   }, [isPopoverOpen])
 
   const externalConnections = connections.filter((c) => c.isExternal)
-  const activeCount = externalConnections.filter(
-    (c) => c.status === 'pending' || c.status === 'ok',
+  const pendingCount = externalConnections.filter(
+    (c) => c.status === 'pending',
   ).length
-  const hasConnections = externalConnections.length > 0
 
   const dotColor = isAirGapEnabled
     ? 'bg-emerald-400'
-    : hasConnections
+    : pendingCount > 0
       ? 'bg-amber-400'
       : 'bg-emerald-400'
 
   const label = isAirGapEnabled
     ? 'Air-gap active'
-    : activeCount > 0
-      ? `${activeCount} outbound`
+    : pendingCount > 0
+      ? `${pendingCount} outbound`
       : 'No connections'
 
   return (
@@ -106,12 +105,12 @@ export function ConnectionStatusBar(): React.ReactElement {
         >
           <span
             className={`inline-block w-2 h-2 rounded-full ${dotColor} ${
-              activeCount > 0 && !isAirGapEnabled ? 'animate-pulse' : ''
+              pendingCount > 0 && !isAirGapEnabled ? 'animate-pulse' : ''
             }`}
           />
           {isAirGapEnabled ? (
             <WifiOff className="w-3 h-3" />
-          ) : hasConnections ? (
+          ) : pendingCount > 0 ? (
             <Wifi className="w-3 h-3" />
           ) : null}
           <span>{label}</span>
