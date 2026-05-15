@@ -1,4 +1,4 @@
-import{c as g,f as T,r,j as e,t as B,v as M}from"./index-BtAzUzC7.js";import{P as A}from"./PageHeader-CpnPkOee.js";import{I as $}from"./info-BQ73VeAt.js";/**
+import{c as g,f as T,r,j as e,t as B,v as M}from"./index-BBMs_kGj.js";import{P as A}from"./PageHeader-3yxDO1VJ.js";import{I as $}from"./info-BwbaY7GS.js";/**
  * @license lucide-react v0.400.0 - ISC
  *
  * This source code is licensed under the ISC license.
@@ -18,7 +18,7 @@ import{c as g,f as T,r,j as e,t as B,v as M}from"./index-BtAzUzC7.js";import{P a
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
- */const D=g("RotateCcw",[["path",{d:"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",key:"1357e3"}],["path",{d:"M3 3v5h5",key:"1xhq8a"}]]),h="ngarrett@lotusworks.com",H=["Billing Hours","Reconcile","Projects","Exports","Snapshots / History","Settings","Import / parsing","Calculations / OT logic","Visual / theme","Other"];function Y(i,a,o){return`[Reconciler ${i==="bug"?"Bug":"Idea"}] ${a} — ${o}`}function F(i,a,o,l,d){const u=i==="bug"?"Bug Report":"Enhancement Idea",x=o.charAt(0).toUpperCase()+o.slice(1),c="1.4.7";return[`TYPE: ${u}`,`AREA: ${a}`,`PRIORITY: ${x}`,d?`SUBMITTED BY: ${d}`:"SUBMITTED BY: (anonymous)",`APP VERSION: v${c}`,`URL: ${typeof window<"u"?window.location.href:""}`,"","---","","DESCRIPTION:","",l,"","---","",`Sent from LotusWorks Reconciler v${c}`].join(`
+ */const D=g("RotateCcw",[["path",{d:"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",key:"1357e3"}],["path",{d:"M3 3v5h5",key:"1xhq8a"}]]),h="ngarrett@lotusworks.com",H=["Billing Hours","Reconcile","Projects","Exports","Snapshots / History","Settings","Import / parsing","Calculations / OT logic","Visual / theme","Other"];function Y(i,a,o){return`[Reconciler ${i==="bug"?"Bug":"Idea"}] ${a} — ${o}`}function F(i,a,o,l,d){const u=i==="bug"?"Bug Report":"Enhancement Idea",x=o.charAt(0).toUpperCase()+o.slice(1),c="1.4.8";return[`TYPE: ${u}`,`AREA: ${a}`,`PRIORITY: ${x}`,d?`SUBMITTED BY: ${d}`:"SUBMITTED BY: (anonymous)",`APP VERSION: v${c}`,`URL: ${typeof window<"u"?window.location.href:""}`,"","---","","DESCRIPTION:","",l,"","---","",`Sent from LotusWorks Reconciler v${c}`].join(`
 `)}function V(){const i=T(t=>t.consumeFeedbackPreselect),[a,o]=r.useState(null),[l,d]=r.useState(""),[u,x]=r.useState(""),[c,y]=r.useState("medium"),[b,w]=r.useState(""),[j,S]=r.useState(""),[p,n]=r.useState({}),[v,f]=r.useState(!1),[k,m]=r.useState(null);r.useEffect(()=>{const t=i();t&&o(t)},[i]);function N(){const t={};return a||(t.type=!0),l||(t.area=!0),u.trim()||(t.subject=!0),b.trim()||(t.description=!0),n(t),Object.keys(t).length===0}function C(){return a?{subject:Y(a,l,u.trim()),body:F(a,l,c,b.trim(),j.trim())}:null}async function _(){if(!N())return;const t=C();if(!t)return;const s=`TO: ${h}
 SUBJECT: ${t.subject}
 
