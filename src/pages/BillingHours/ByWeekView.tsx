@@ -2,12 +2,16 @@ import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
 import { CalendarDays } from 'lucide-react'
 
+/** Standard US payroll workweek — always 40 regardless of project threshold */
+const STANDARD_WORKWEEK = 40
+
 interface WeekAgg {
   weekStart: string
   employees: Set<string>
   projects: Set<string>
   hours: number
-  otHrs: number
+  otWorked: number
+  otBilled: number
   billable: number
 }
 
@@ -36,13 +40,15 @@ export function ByWeekView({
       employees: new Set<string>(),
       projects: new Set<string>(),
       hours: 0,
-      otHrs: 0,
+      otWorked: 0,
+      otBilled: 0,
       billable: 0,
     }
     agg.employees.add(row.employeeCode)
     agg.projects.add(row.projectKey)
     agg.hours += row.hours
-    agg.otHrs += row.otHrs
+    agg.otWorked += Math.max(0, row.hours - STANDARD_WORKWEEK)
+    agg.otBilled += row.otHrs
     agg.billable += row.regularDollars + row.otDollars + row.dtDollars
     byWeek.set(row.weekStart, agg)
   }
@@ -73,7 +79,8 @@ export function ByWeekView({
             <Th right># Employees</Th>
             <Th right># Projects</Th>
             <Th right>Total Hours</Th>
-            <Th right>OT Hours</Th>
+            <Th right>OT Worked</Th>
+            <Th right>OT Billed</Th>
             <Th right>Total Billable</Th>
           </tr>
         </thead>
@@ -98,8 +105,11 @@ export function ByWeekView({
               <td className="px-5 py-3 text-right tabular-nums text-slate-300">
                 {fmtHours(agg.hours)}
               </td>
+              <td className="px-5 py-3 text-right tabular-nums text-amber-400">
+                {fmtHours(agg.otWorked)}
+              </td>
               <td className="px-5 py-3 text-right tabular-nums text-lw-orange-400">
-                {fmtHours(agg.otHrs)}
+                {fmtHours(agg.otBilled)}
               </td>
               <td className="px-5 py-3 text-right tabular-nums font-medium text-slate-100">
                 {fmtUsd(agg.billable)}

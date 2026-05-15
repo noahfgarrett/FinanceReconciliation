@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.2',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### OT billing accuracy & dynamic recomputation
+- Overtime billing now correctly uses each project's configured OT threshold instead of always using 40 hours.
+- All billing views now show two OT columns: "OT Worked" (hours over 40) and "OT Billed" (hours over the project threshold billed at 1.5×).
+- Expanding an employee row now shows the bill rate per hour alongside each project/week entry.
+- Changing project settings (bill rate, OT threshold) now immediately updates the loaded billing data — no re-import needed.`,
+  },
+  {
     version: '1.5.1',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',

@@ -165,16 +165,9 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
       return
     }
 
-    // Safety guard: never replace non-empty billing with an empty result,
-    // and never let a recompute inflate unmapped rows.  Either case usually
-    // means allocation resolution regressed (e.g. aliases were removed).
-    // Preserve old billing to avoid data loss.
+    // Safety guard: never replace non-empty billing with an empty result.
+    // This protects against a broken config that wipes all rows.
     if (out.weeklyBilling.length === 0 && cur.weeklyBilling.length > 0) {
-      return
-    }
-    const oldUnmapped = cur.weeklyBilling.filter((r) => r.projectKey.startsWith('__unmapped:')).length
-    const newUnmapped = out.weeklyBilling.filter((r) => r.projectKey.startsWith('__unmapped:')).length
-    if (newUnmapped > oldUnmapped && cur.weeklyBilling.length > 0) {
       return
     }
 

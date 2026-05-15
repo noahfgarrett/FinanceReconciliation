@@ -3,14 +3,29 @@ import { fmtUsd, fmtHours } from '@/lib/format'
 import { Badge } from '@/components/ui/Badge'
 import { Boxes } from 'lucide-react'
 
+/** Standard US payroll workweek — always 40 regardless of project threshold */
+const STANDARD_WORKWEEK = 40
+
 export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Record<string, ProjectConfig> }) {
-  type Agg = { hours: number; reg: number; ot: number; dt: number; employees: Set<string>; weeks: Set<string> }
+  type Agg = {
+    hours: number
+    otWorked: number
+    otBilled: number
+    reg: number
+    ot: number
+    dt: number
+    employees: Set<string>
+    weeks: Set<string>
+  }
   const byProject = new Map<string, Agg>()
   for (const row of snap.weeklyBilling) {
     const a = byProject.get(row.projectKey) ?? {
-      hours: 0, reg: 0, ot: 0, dt: 0, employees: new Set<string>(), weeks: new Set<string>(),
+      hours: 0, otWorked: 0, otBilled: 0, reg: 0, ot: 0, dt: 0,
+      employees: new Set<string>(), weeks: new Set<string>(),
     }
     a.hours += row.hours
+    a.otWorked += Math.max(0, row.hours - STANDARD_WORKWEEK)
+    a.otBilled += row.otHrs
     a.reg += row.regularDollars
     a.ot += row.otDollars
     a.dt += row.dtDollars
@@ -44,7 +59,8 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
             <Th>Project</Th>
             <Th>OT Threshold</Th>
             <Th right>Hours</Th>
-            <Th right>OT Hours</Th>
+            <Th right>OT Worked</Th>
+            <Th right>OT Billed</Th>
             <Th right>Rate</Th>
             <Th right>Billable</Th>
           </tr>
@@ -52,9 +68,6 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
         <tbody>
           {rows.map(([key, agg], idx) => {
             const cfg = configs[key]
-            const otHrs = snap.weeklyBilling
-              .filter((r) => r.projectKey === key)
-              .reduce((s, r) => s + r.otHrs, 0)
             const regRate = cfg?.defaultRegularRate ?? 0
             const otRate = cfg?.otRateOverride ?? regRate * 1.5
             return (
@@ -71,13 +84,16 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
                   </div>
                 </td>
                 <td className="px-5 py-3">
-                  <Badge tone={cfg?.otThresholdHrs === 50 ? 'orange' : 'gray'}>
+                  <Badge tone="amber">
                     {cfg?.otThresholdHrs ?? '—'} hrs / wk
                   </Badge>
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums">{fmtHours(agg.hours)}</td>
+                <td className="px-5 py-3 text-right tabular-nums text-amber-400">
+                  {fmtHours(agg.otWorked)}
+                </td>
                 <td className="px-5 py-3 text-right tabular-nums text-lw-orange-400">
-                  {fmtHours(otHrs)}
+                  {fmtHours(agg.otBilled)}
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums">
                   {regRate ? `${fmtUsd(regRate)} / ${fmtUsd(otRate)}` : '—'}
