@@ -42,7 +42,8 @@ export function Modal({ open, onClose, title, children, width = 'md' }: ModalPro
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[width]} rounded-2xl bg-[#0a0f1c] border border-slate-800 shadow-2xl animate-scale-in overflow-hidden`}
+        className={`relative w-full ${widths[width]} rounded-2xl border shadow-2xl animate-scale-in overflow-hidden`}
+        style={{ backgroundColor: 'var(--surface-overlay)', borderColor: 'var(--border-default)' }}
       >
         {/* top brand sheen */}
         <div
@@ -50,11 +51,15 @@ export function Modal({ open, onClose, title, children, width = 'md' }: ModalPro
           className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lw-orange-500/50 to-transparent"
         />
         {title && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-            <h2 className="font-display text-base font-semibold text-slate-100 tracking-tight">{title}</h2>
+          <div
+            className="flex items-center justify-between px-5 py-4 border-b"
+            style={{ borderColor: 'var(--border-default)' }}
+          >
+            <h2 className="font-display text-base font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-100 hover:bg-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lw-orange-500/60"
+              className="p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lw-orange-500/60"
+              style={{ color: 'var(--text-muted)' }}
               aria-label="Close"
             >
               <X className="w-4 h-4" />

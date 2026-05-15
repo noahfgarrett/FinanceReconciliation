@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.8',
+    date: '2026-05-15T00:00:00Z',
+    type: 'fix',
+    notes: `### Light mode polish & layout fixes
+- Import wizard now uses proper light-mode colors instead of dark gray backgrounds.
+- All form inputs (text fields, number fields) adapt correctly to the active theme.
+- Projects step in the import wizard now scrolls when there are many projects.
+- Employee rate and job title columns are wider to prevent clipping.
+- Update download works reliably from any origin (file://, localhost, GitHub Pages).`,
+  },
+  {
     version: '1.4.7',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',
