@@ -3,7 +3,7 @@ import { FileText, Download, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { fmtUsdCents, fmtHours } from '@/lib/format'
-import { projectLabel } from '@/lib/projectLabels'
+import { buildInvoiceLines, invoiceTotals } from '@/exports/invoiceLines'
 import { generateInvoicePdf, downloadPdf } from '@/exports/invoicePdf'
 import type { InvoiceData } from '@/exports/invoicePdf'
 import logoUrl from '@/assets/lotusworks-logo.png'
@@ -12,47 +12,6 @@ interface InvoicePreviewModalProps {
   open: boolean
   onClose: () => void
   data: InvoiceData | null
-}
-
-interface LineItem {
-  projectKey: string
-  project: string
-  po: string
-  regHrs: number
-  otHrs: number
-  dtHrs: number
-  regDollars: number
-  otDollars: number
-  dtDollars: number
-  total: number
-}
-
-function buildLineItems(data: InvoiceData): LineItem[] {
-  return data.projectKeys.map((key) => {
-    const cfg = data.configs[key]
-    const rows = data.snapshot.weeklyBilling.filter((r) => r.projectKey === key)
-
-    const regHrs = rows.reduce((s, r) => s + r.regularHrs, 0)
-    const otHrs = rows.reduce((s, r) => s + r.otHrs, 0)
-    const dtHrs = rows.reduce((s, r) => s + r.dtHrs, 0)
-    const regDollars = rows.reduce((s, r) => s + r.regularDollars, 0)
-    const otDollars = rows.reduce((s, r) => s + r.otDollars, 0)
-    const dtDollars = rows.reduce((s, r) => s + r.dtDollars, 0)
-    const total = regDollars + otDollars + dtDollars
-
-    return {
-      projectKey: key,
-      project: projectLabel(key, data.configs),
-      po: cfg?.poNumber ?? '—',
-      regHrs,
-      otHrs,
-      dtHrs,
-      regDollars,
-      otDollars,
-      dtDollars,
-      total,
-    }
-  })
 }
 
 export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModalProps) {
@@ -69,11 +28,13 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
     day: 'numeric',
   })
 
-  const lineItems = buildLineItems(data)
-  const regTotal = lineItems.reduce((s, r) => s + r.regDollars, 0)
-  const otTotal = lineItems.reduce((s, r) => s + r.otDollars, 0)
-  const dtTotal = lineItems.reduce((s, r) => s + r.dtDollars, 0)
-  const grandTotal = regTotal + otTotal + dtTotal
+  // Same lines and totals as the generated PDF
+  const lineItems = buildInvoiceLines(data)
+  const totals = invoiceTotals(lineItems)
+  const regTotal = totals.regular
+  const otTotal = totals.overtime
+  const dtTotal = totals.doubleTime
+  const grandTotal = totals.total
 
   async function handleGeneratePdf(): Promise<void> {
     setIsGenerating(true)
@@ -184,9 +145,9 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                   <th className="text-right px-3 py-2">Reg Hrs</th>
                   <th className="text-right px-3 py-2">OT Hrs</th>
                   <th className="text-right px-3 py-2">DT Hrs</th>
-                  <th className="text-right px-3 py-2">Reg $</th>
-                  <th className="text-right px-3 py-2">OT $</th>
-                  <th className="text-right px-3 py-2">DT $</th>
+                  <th className="text-right px-3 py-2">Reg Rate</th>
+                  <th className="text-right px-3 py-2">OT Rate</th>
+                  <th className="text-right px-3 py-2">DT Rate</th>
                   <th className="text-right px-3 py-2 rounded-tr-md font-bold text-slate-700">
                     Total
                   </th>
@@ -195,11 +156,11 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
               <tbody>
                 {lineItems.map((item, i) => (
                   <tr
-                    key={item.projectKey}
+                    key={`${item.projectKey}|${item.regRate}|${item.otRate}|${item.dtRate}`}
                     className={`border-b border-slate-100 ${i % 2 === 1 ? 'bg-slate-50' : ''}`}
                   >
                     <td className="px-3 py-2 font-medium text-slate-800">{item.project}</td>
-                    <td className="px-3 py-2 text-slate-500">{item.po}</td>
+                    <td className="px-3 py-2 text-slate-500">{item.po || '—'}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmtHours(item.regHrs)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-lw-orange-600">
                       {fmtHours(item.otHrs)}
@@ -208,13 +169,13 @@ export function InvoicePreviewModal({ open, onClose, data }: InvoicePreviewModal
                       {item.dtHrs > 0 ? fmtHours(item.dtHrs) : '—'}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {fmtUsdCents(item.regDollars)}
+                      {fmtUsdCents(item.regRate)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-lw-orange-600">
-                      {item.otDollars > 0 ? fmtUsdCents(item.otDollars) : '—'}
+                      {fmtUsdCents(item.otRate)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {item.dtDollars > 0 ? fmtUsdCents(item.dtDollars) : '—'}
+                      {item.dtHrs > 0 ? fmtUsdCents(item.dtRate) : '—'}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">
                       {fmtUsdCents(item.total)}

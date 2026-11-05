@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import type { Client, ProjectConfig, Snapshot } from '@/persistence/schemas'
 import { useSnapshotStore } from '@/store/snapshotStore'
-import { projectLabel } from '@/lib/projectLabels'
+import { buildInvoiceLines, invoiceTotals } from './invoiceLines'
 import logoUrl from '@/assets/lotusworks-logo.png'
 
 export interface InvoiceData {
@@ -22,46 +22,6 @@ const SLATE_900 = rgb(0.07, 0.09, 0.14)
 const SLATE_600 = rgb(0.27, 0.33, 0.42)
 const SLATE_400 = rgb(0.58, 0.64, 0.72)
 const ORANGE = rgb(0.957, 0.482, 0.125) // #F47B20 — LotusWorks brand orange
-
-interface LineItem {
-  project: string
-  po: string
-  regHrs: number
-  otHrs: number
-  dtHrs: number
-  regRate: number
-  otRate: number
-  dtRate: number
-  total: number
-}
-
-function buildLineItems(data: InvoiceData): LineItem[] {
-  return data.projectKeys.map((key) => {
-    const cfg = data.configs[key]
-    const rows = data.snapshot.weeklyBilling.filter((r) => r.projectKey === key)
-
-    const regHrs = rows.reduce((s, r) => s + r.regularHrs, 0)
-    const otHrs = rows.reduce((s, r) => s + r.otHrs, 0)
-    const dtHrs = rows.reduce((s, r) => s + r.dtHrs, 0)
-    const regRate = cfg?.defaultRegularRate ?? 0
-    const otRate = cfg?.otRateOverride ?? regRate * 1.5
-    const dtRate = cfg?.dtRateOverride ?? regRate * 2
-    const total =
-      rows.reduce((s, r) => s + r.regularDollars + r.otDollars + r.dtDollars, 0)
-
-    return {
-      project: projectLabel(key, data.configs),
-      po: cfg?.poNumber ?? '',
-      regHrs,
-      otHrs,
-      dtHrs,
-      regRate,
-      otRate,
-      dtRate,
-      total,
-    }
-  })
-}
 
 function formatMoney(n: number): string {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
@@ -230,7 +190,7 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
   drawTextRight(page, 'DT RATE', COL_DT_RATE + 42, thY, fontBold, thSize, thColor)
   drawTextRight(page, 'TOTAL', COL_TOTAL, thY, fontBold, thSize, thColor)
 
-  const lineItems = buildLineItems(data)
+  const lineItems = buildInvoiceLines(data)
   let rowY = tableTopY - HEADER_H
 
   for (let i = 0; i < lineItems.length; i++) {
@@ -264,16 +224,11 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Uint8Array>
   }
 
   // --- Totals ---
-  const regDollars = data.snapshot.weeklyBilling
-    .filter((r) => data.projectKeys.includes(r.projectKey))
-    .reduce((s, r) => s + r.regularDollars, 0)
-  const otDollars = data.snapshot.weeklyBilling
-    .filter((r) => data.projectKeys.includes(r.projectKey))
-    .reduce((s, r) => s + r.otDollars, 0)
-  const dtDollars = data.snapshot.weeklyBilling
-    .filter((r) => data.projectKeys.includes(r.projectKey))
-    .reduce((s, r) => s + r.dtDollars, 0)
-  const grandTotal = regDollars + otDollars + dtDollars
+  const totals = invoiceTotals(lineItems)
+  const regDollars = totals.regular
+  const otDollars = totals.overtime
+  const dtDollars = totals.doubleTime
+  const grandTotal = totals.total
 
   const sepY = rowY - 10
   page.drawLine({
