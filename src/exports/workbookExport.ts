@@ -68,7 +68,7 @@ export async function generateWorkbook(opts: WorkbookOptions): Promise<Uint8Arra
   try {
     const logoBuf = await fetch(logoUrl).then((r) => r.arrayBuffer())
     logoImageId = workbook.addImage({
-      buffer: logoBuf as Buffer,
+      buffer: logoBuf,
       extension: 'png',
     })
   } catch {

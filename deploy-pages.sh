@@ -14,8 +14,15 @@ echo "==> Preparing gh-pages content..."
 rm -rf "$DEPLOY_DIR"
 mkdir "$DEPLOY_DIR"
 
-# Copy the built HTML as index.html (GitHub Pages serves index.html by default)
-cp dist/Reconciler.html "$DEPLOY_DIR/index.html"
+# The build writes dist/Reconciler-v<version>.html. Copy it as index.html
+# (GitHub Pages serves index.html by default).
+VERSION=$(node -p "require('./package.json').version")
+BUILT_HTML="dist/Reconciler-v${VERSION}.html"
+if [ ! -f "$BUILT_HTML" ]; then
+  echo "ERROR: expected $BUILT_HTML after build" >&2
+  exit 1
+fi
+cp "$BUILT_HTML" "$DEPLOY_DIR/index.html"
 
 # Inject service worker registration into <head> (no PWA manifest — desktop-only app)
 node -e "
@@ -52,7 +59,7 @@ fs.writeFileSync('$DEPLOY_DIR/index.html', updated);
 console.log('  Service worker registration injected into index.html');
 "
 
-# Copy service worker (logo is now inlined into Reconciler.html as a data URI
+# Copy service worker (logo is now inlined into the built HTML as a data URI
 # via the bundled import in src/assets/, so no separate file is needed)
 cp sw.js "$DEPLOY_DIR/"
 
