@@ -27,7 +27,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Brainstorming session artifacts
+# Local tool config
+CLAUDE.md
+.claude/
 .superpowers/
 
 # Deploy temp
