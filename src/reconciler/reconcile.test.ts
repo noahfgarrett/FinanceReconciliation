@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { reconcile } from './reconcile'
+import { isUnmappedKey, unmappedKey } from '@/lib/projectLabels'
 import type { Employee, ExcelRow, ParsedPdf, ProjectConfig } from '@/persistence/schemas'
 
 const emp = (code: string, first = 'X', last = 'Y'): Employee => ({ code, firstName: first, lastName: last })
@@ -86,6 +87,10 @@ describe('reconcile', () => {
     })
     expect(out.unresolvedAllocations).toContain('XYZ-NO-MATCH')
     expect(out.warnings.some((w) => w.code === 'allocation-not-mapped')).toBe(true)
+    // Hours are kept as a $0 row under an unmapped key, not dropped
+    const row = out.weeklyBilling.find((r) => isUnmappedKey(r.projectKey))
+    expect(row?.projectKey).toBe(unmappedKey('XYZ-NO-MATCH'))
+    expect(row?.hours).toBe(30)
   })
 
   it('flags excel-vs-pdf mismatches at the EMPLOYEE level (sum across PDFs)', () => {

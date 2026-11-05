@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { WeeklyBilling, ProjectConfig, Employee, RowFlag } from '@/persistence/schemas'
-import { fmtUsd, fmtHours } from '@/lib/format'
+import { fmtUsd, fmtHours, pluralize } from '@/lib/format'
 import { makeColumns, severityTone } from './columns'
 import { SpreadsheetToolbar } from './SpreadsheetToolbar'
 import { RowDrawer } from './RowDrawer'
@@ -491,7 +491,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                             style={{ width: cell.column.getSize() }}
                             colSpan={isGroupRow ? 1 : undefined}
                           >
-                            {row.subRows.length} rows
+                            {pluralize(row.subRows.length, 'row')}
                           </td>
                         )
                       }
@@ -631,7 +631,7 @@ export function SpreadsheetView({ rows, configs, employees }: Props) {
                 if (colId === 'employeeCode') {
                   return (
                     <td key={colId} className="px-3 py-2 text-xs text-slate-500" style={{ width: header.getSize() }}>
-                      {visibleData.length} rows
+                      {pluralize(visibleData.length, 'row')}
                     </td>
                   )
                 }

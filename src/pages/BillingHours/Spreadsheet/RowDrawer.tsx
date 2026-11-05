@@ -6,6 +6,7 @@ import type {
 } from '@/persistence/schemas'
 import { Badge } from '@/components/ui/Badge'
 import { fmtHours } from '@/lib/format'
+import { projectLabel } from '@/lib/projectLabels'
 import { PdfSourceViewer } from '@/components/PdfSourceViewer'
 
 interface RowDrawerProps {
@@ -75,7 +76,7 @@ export function RowDrawer({
   // Look up employee name
   const emp = employees.find((e) => e.code === row.employeeCode)
   const empName = emp ? `${emp.firstName} ${emp.lastName}` : row.employeeCode
-  const projectName = configs[row.projectKey]?.displayName ?? row.projectKey
+  const projectName = projectLabel(row.projectKey, configs)
   const config = configs[row.projectKey]
 
   // Find matching PDF entries for this employee/week

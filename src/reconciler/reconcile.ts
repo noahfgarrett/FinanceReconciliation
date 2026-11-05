@@ -3,6 +3,7 @@ import type {
   SourceLocation, WeeklyBilling,
 } from '@/persistence/schemas'
 import { resolveAllocationToProjectKey } from './projectMatching'
+import { unmappedKey } from '@/lib/projectLabels'
 import { splitWeekHours, resolveRates } from './otCalculator'
 import type { EmployeeProfileForRates } from './otCalculator'
 
@@ -163,7 +164,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
         unresolved.add(entry.allocation)
       }
 
-      const effectiveKey = projectKey ?? `__unmapped:${entry.allocation}`
+      const effectiveKey = projectKey ?? unmappedKey(entry.allocation)
       const k = `${pdf.employeeCode}|${effectiveKey}|${entry.weekStart}`
       const existing = buckets.get(k)
       if (existing) {

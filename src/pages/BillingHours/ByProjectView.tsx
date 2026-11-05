@@ -1,7 +1,8 @@
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
-import { fmtUsd, fmtHours } from '@/lib/format'
+import { fmtUsd, fmtHours, pluralize } from '@/lib/format'
+import { isUnmappedKey, projectLabel } from '@/lib/projectLabels'
 import { Badge } from '@/components/ui/Badge'
-import { Boxes } from 'lucide-react'
+import { Boxes, AlertTriangle } from 'lucide-react'
 
 /** Standard US payroll workweek — always 40 regardless of project threshold */
 const STANDARD_WORKWEEK = 40
@@ -34,9 +35,14 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
     byProject.set(row.projectKey, a)
   }
 
+  // Mapped projects by billable (highest first), then unmapped codes at the bottom
   const rows = Array.from(byProject.entries()).sort(
-    (a, b) => b[1].reg + b[1].ot + b[1].dt - (a[1].reg + a[1].ot + a[1].dt),
+    (a, b) =>
+      Number(isUnmappedKey(a[0])) - Number(isUnmappedKey(b[0])) ||
+      b[1].reg + b[1].ot + b[1].dt - (a[1].reg + a[1].ot + a[1].dt),
   )
+  const mappedCount = rows.filter(([key]) => !isUnmappedKey(key)).length
+  const unmappedCount = rows.length - mappedCount
 
   return (
     <div className="mx-8 mb-8 bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden shadow-md animate-slide-up">
@@ -48,7 +54,8 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
           <div>
             <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Project</div>
             <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
-              {rows.length} projects
+              {pluralize(mappedCount, 'project')}
+              {unmappedCount > 0 && ` · ${unmappedCount} unmapped`}
             </div>
           </div>
         </div>
@@ -68,25 +75,36 @@ export function ByProjectView({ snap, configs }: { snap: Snapshot; configs: Reco
         <tbody>
           {rows.map(([key, agg], idx) => {
             const cfg = configs[key]
+            const unmapped = isUnmappedKey(key)
             const regRate = cfg?.defaultRegularRate ?? 0
             const otRate = cfg?.otRateOverride ?? regRate * 1.5
             return (
               <tr
                 key={key}
+                data-unmapped={unmapped || undefined}
                 className={`border-b border-slate-900/60 last:border-0 transition-colors hover:bg-lw-orange-500/[0.04] ${
-                  idx % 2 === 1 ? 'bg-white/[0.012]' : ''
+                  unmapped ? 'bg-amber-500/[0.04]' : idx % 2 === 1 ? 'bg-white/[0.012]' : ''
                 }`}
               >
-                <td className="px-5 py-3">
-                  <div className="text-slate-100 font-medium tracking-tight">{cfg?.displayName ?? key}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    <span className="tabular-nums">{agg.employees.size}</span> employees · <span className="tabular-nums">{agg.weeks.size}</span> weeks
+                <td className={`py-3 pr-5 ${unmapped ? 'pl-4 border-l-2 border-amber-500/60' : 'pl-5'}`}>
+                  <div
+                    className={`font-medium tracking-tight flex items-center gap-1.5 ${
+                      unmapped ? 'text-amber-300' : 'text-slate-100'
+                    }`}
+                  >
+                    {unmapped && <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />}
+                    {projectLabel(key, configs)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5 tabular-nums">
+                    {pluralize(agg.employees.size, 'employee')} · {pluralize(agg.weeks.size, 'week')}
                   </div>
                 </td>
                 <td className="px-5 py-3">
-                  <Badge tone="amber">
-                    {cfg?.otThresholdHrs ?? '—'} hrs / wk
-                  </Badge>
+                  {cfg ? (
+                    <Badge tone="amber">{cfg.otThresholdHrs} hrs / wk</Badge>
+                  ) : (
+                    <Badge tone="gray">Not mapped</Badge>
+                  )}
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums">{fmtHours(agg.hours)}</td>
                 <td className="px-5 py-3 text-right tabular-nums text-amber-400">

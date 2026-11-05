@@ -10,6 +10,7 @@ import {
   Inbox,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { projectLabel } from '@/lib/projectLabels'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useSnapshotStore } from '@/store/snapshotStore'
@@ -342,7 +343,7 @@ export default function ExportsPage() {
                             key={pk}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400"
                           >
-                            {projectConfigs[pk]?.displayName ?? pk}
+                            {projectLabel(pk, projectConfigs)}
                           </span>
                         ))}
                       </div>

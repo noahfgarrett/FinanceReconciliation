@@ -364,6 +364,11 @@ h1, h2, h3 {
 .light .text-lw-orange-400 { color: var(--brand-orange-700); }
 .light .text-lw-orange-500 { color: var(--brand-orange-700); }
 
+/* Amber text (warnings, unmapped codes, OT worked) has the same problem on
+ * cream; use Tailwind's amber-700. */
+.light .text-amber-300,
+.light .text-amber-400 { color: #B45309; }
+
 /* Inputs / selects — derive entirely from tokens */
 .light select,
 .light input[type="text"],

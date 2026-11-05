@@ -3,7 +3,8 @@ import { ChevronRight, ChevronDown, Users } from 'lucide-react'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import { resolveRates } from '@/reconciler/otCalculator'
 import { useEmployeeStore } from '@/store/employeeStore'
-import { fmtUsd, fmtHours } from '@/lib/format'
+import { fmtUsd, fmtHours, pluralize } from '@/lib/format'
+import { isUnmappedKey, projectLabel } from '@/lib/projectLabels'
 
 /** Standard US payroll workweek — always 40 regardless of project threshold */
 const STANDARD_WORKWEEK = 40
@@ -69,7 +70,7 @@ export function ByEmployeeView({
       otBilled: 0,
       billable: 0,
     }
-    agg.projects.add(row.projectKey)
+    if (!isUnmappedKey(row.projectKey)) agg.projects.add(row.projectKey)
     agg.weeks.add(row.weekStart)
     agg.hours += row.hours
     agg.otWorked += Math.max(0, row.hours - STANDARD_WORKWEEK)
@@ -149,7 +150,7 @@ export function ByEmployeeView({
           <div>
             <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Employee</div>
             <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
-              {rows.length} employees · click row to expand
+              {pluralize(rows.length, 'employee')} · click row to expand
             </div>
           </div>
         </div>
@@ -257,8 +258,12 @@ export function ByEmployeeView({
                               key={i}
                               className="border-b border-slate-900/40 last:border-0 hover:bg-slate-900/30"
                             >
-                              <td className="pl-16 pr-5 py-2 text-slate-400">
-                                {configs[sr.projectKey]?.displayName ?? sr.projectKey}
+                              <td
+                                className={`pl-16 pr-5 py-2 ${
+                                  isUnmappedKey(sr.projectKey) ? 'text-amber-300' : 'text-slate-400'
+                                }`}
+                              >
+                                {projectLabel(sr.projectKey, configs)}
                               </td>
                               <td className="px-5 py-2 text-slate-500">{fmtWeek(sr.weekStart)}</td>
                               <td className="px-5 py-2 text-right tabular-nums text-slate-400">

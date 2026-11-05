@@ -5,7 +5,8 @@ import type { WeeklyBilling, ProjectConfig, Employee } from '@/persistence/schem
 import { fmtUsd } from '@/lib/format'
 import type { Density } from './SpreadsheetView'
 import { rowsToCsv, downloadCsv } from '@/lib/csvExport'
-import { fmtHours } from '@/lib/format'
+import { fmtHours, pluralize } from '@/lib/format'
+import { projectLabel } from '@/lib/projectLabels'
 
 const DENSITY_ICONS: Record<Density, React.ReactNode> = {
   compact: <Minus className="w-3.5 h-3.5" />,
@@ -127,7 +128,7 @@ export function SpreadsheetToolbar({
       {
         key: 'projectKey',
         header: 'Project',
-        format: (v) => configs[String(v)]?.displayName ?? String(v),
+        format: (v) => projectLabel(String(v), configs),
       },
       { key: 'weekStart', header: 'Week Start' },
       { key: 'hours', header: 'Total Hours', format: (v) => fmtHours(Number(v)) },
@@ -247,7 +248,7 @@ export function SpreadsheetToolbar({
         <div className="flex-1" />
 
         <span className="text-xs text-slate-500 tabular-nums">
-          {visibleRowCount} rows
+          {pluralize(visibleRowCount, 'row')}
           {errorCount > 0 && (
             <> · <span className="text-red-400">{errorCount} {errorCount === 1 ? 'error' : 'errors'}</span></>
           )}

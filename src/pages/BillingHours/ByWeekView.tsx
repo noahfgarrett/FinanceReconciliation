@@ -1,5 +1,6 @@
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
-import { fmtUsd, fmtHours } from '@/lib/format'
+import { fmtUsd, fmtHours, pluralize } from '@/lib/format'
+import { isUnmappedKey } from '@/lib/projectLabels'
 import { CalendarDays } from 'lucide-react'
 
 /** Standard US payroll workweek — always 40 regardless of project threshold */
@@ -45,7 +46,8 @@ export function ByWeekView({
       billable: 0,
     }
     agg.employees.add(row.employeeCode)
-    agg.projects.add(row.projectKey)
+    // Unmapped allocation codes aren't projects; their hours still count below
+    if (!isUnmappedKey(row.projectKey)) agg.projects.add(row.projectKey)
     agg.hours += row.hours
     agg.otWorked += Math.max(0, row.hours - STANDARD_WORKWEEK)
     agg.otBilled += row.otHrs
@@ -67,7 +69,7 @@ export function ByWeekView({
           <div>
             <div className="text-[13px] font-semibold text-slate-100 tracking-tight">By Week</div>
             <div className="text-[10.5px] text-slate-500 uppercase tracking-[0.12em]">
-              {rows.length} weeks
+              {pluralize(rows.length, 'week')}
             </div>
           </div>
         </div>

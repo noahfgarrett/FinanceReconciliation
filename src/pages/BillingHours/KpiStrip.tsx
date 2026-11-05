@@ -1,5 +1,6 @@
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
-import { fmtUsd, fmtHours } from '@/lib/format'
+import { fmtUsd, fmtHours, pluralize } from '@/lib/format'
+import { billingCounts } from '@/lib/billingSummary'
 import { DollarSign, Clock, Zap, Boxes } from 'lucide-react'
 import type { ComponentType } from 'react'
 
@@ -76,16 +77,21 @@ export function KpiStrip({ snap, configs }: { snap: Snapshot; configs: Record<st
   const total = totalReg + totalOt + totalDt
   const totalHrs = snap.weeklyBilling.reduce((s, r) => s + r.hours, 0)
   const otHrs = snap.weeklyBilling.reduce((s, r) => s + r.otHrs, 0)
-  const projects = new Set(snap.weeklyBilling.map((r) => r.projectKey)).size
-  const employees = new Set(snap.weeklyBilling.map((r) => r.employeeCode)).size
-  const unconfigured = Object.values(configs).filter((c) => c.defaultRegularRate === 0).length
+  const counts = billingCounts(snap.weeklyBilling, configs)
+  const projectIssues = [
+    ...(counts.unmappedCodes > 0 ? [`${counts.unmappedCodes} unmapped`] : []),
+    ...(counts.projectsNeedingRates > 0
+      ? [pluralize(counts.projectsNeedingRates, 'needs rates', 'need rates')]
+      : []),
+  ]
+  const needsAttention = projectIssues.length > 0
 
   return (
     <div className="grid grid-cols-4 gap-3 px-8 py-4 stagger animate-fade-in">
       <Tile
         label="Total Billable"
         value={fmtUsd(total)}
-        sub={`${fmtHours(totalHrs)} · ${employees} employees`}
+        sub={`${fmtHours(totalHrs)} · ${pluralize(counts.employees, 'employee')}`}
         icon={DollarSign}
         accent="orange"
       />
@@ -105,11 +111,11 @@ export function KpiStrip({ snap, configs }: { snap: Snapshot; configs: Record<st
       />
       <Tile
         label="Projects"
-        value={String(projects)}
-        sub={unconfigured ? `${unconfigured} need rates` : 'All configured'}
+        value={String(counts.projects)}
+        sub={needsAttention ? projectIssues.join(' · ') : 'All configured'}
         icon={Boxes}
-        accent={unconfigured ? 'amber' : 'emerald'}
-        warn={unconfigured > 0}
+        accent={needsAttention ? 'amber' : 'emerald'}
+        warn={needsAttention}
       />
     </div>
   )

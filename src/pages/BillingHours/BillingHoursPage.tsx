@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { BookmarkPlus, Trash2, Clock } from 'lucide-react'
 import { kvGet, kvSet } from '@/persistence/idb'
 import { relativeTime } from '@/lib/relativeTime'
+import { pluralize } from '@/lib/format'
+import { billingCounts } from '@/lib/billingSummary'
 
 type TabId = 'by-project' | 'by-employee' | 'by-week' | 'spreadsheet'
 
@@ -66,15 +68,22 @@ export default function BillingHoursPage() {
     void kvSet(TAB_STORAGE_KEY, id)
   }
 
+  const counts = snap ? billingCounts(snap.weeklyBilling, configs) : null
+  const subtitle =
+    snap && counts
+      ? [
+          snap.periodLabel,
+          pluralize(counts.employees, 'employee'),
+          pluralize(counts.projects, 'project'),
+          ...(counts.unmappedCodes > 0 ? [pluralize(counts.unmappedCodes, 'unmapped code')] : []),
+        ].join(' · ')
+      : 'Drop your monthly Excel + PDF folder to get started'
+
   return (
     <div>
       <PageHeader
         title="Billing Hours"
-        subtitle={
-          snap
-            ? `${snap.periodLabel} · ${snap.employees.length} employees · ${Object.keys(configs).length} projects`
-            : 'Drop your monthly Excel + PDF folder to get started'
-        }
+        subtitle={subtitle}
         decoration={!snap ? <div className="absolute inset-0 bg-hero-glow" /> : undefined}
         actions={
           snap ? (

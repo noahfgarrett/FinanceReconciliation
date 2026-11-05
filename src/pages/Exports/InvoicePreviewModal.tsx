@@ -3,6 +3,7 @@ import { FileText, Download, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { fmtUsdCents, fmtHours } from '@/lib/format'
+import { projectLabel } from '@/lib/projectLabels'
 import { generateInvoicePdf, downloadPdf } from '@/exports/invoicePdf'
 import type { InvoiceData } from '@/exports/invoicePdf'
 import logoUrl from '@/assets/lotusworks-logo.png'
@@ -41,7 +42,7 @@ function buildLineItems(data: InvoiceData): LineItem[] {
 
     return {
       projectKey: key,
-      project: cfg?.displayName ?? key,
+      project: projectLabel(key, data.configs),
       po: cfg?.poNumber ?? '—',
       regHrs,
       otHrs,

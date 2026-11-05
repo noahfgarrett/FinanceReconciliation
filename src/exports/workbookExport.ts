@@ -1,6 +1,18 @@
 import ExcelJS from 'exceljs'
 import type { Snapshot, ProjectConfig } from '@/persistence/schemas'
 import logoUrl from '@/assets/lotusworks-logo.png'
+import { projectLabel } from '@/lib/projectLabels'
+
+/**
+ * Excel sheet names can't contain \ / * ? : [ ] and are limited to 31 chars.
+ * "Unmapped: CODE" becomes "Unmapped - CODE" rather than "Unmapped- CODE".
+ */
+export function toSheetName(name: string): string {
+  return name
+    .replace(/:\s*/g, ' - ')
+    .replace(/[\\/*?:[\]]/g, '-')
+    .slice(0, 31)
+}
 
 export interface WorkbookOptions {
   snapshot: Snapshot
@@ -91,7 +103,6 @@ export async function generateWorkbook(opts: WorkbookOptions): Promise<Uint8Arra
   const projectAggs = new Map<string, ProjectAgg>()
 
   for (const row of snapshot.weeklyBilling) {
-    const cfg = configs[row.projectKey]
     const existing = projectAggs.get(row.projectKey) ?? {
       regHrs: 0,
       otHrs: 0,
@@ -100,7 +111,7 @@ export async function generateWorkbook(opts: WorkbookOptions): Promise<Uint8Arra
       otDollars: 0,
       dtDollars: 0,
       total: 0,
-      displayName: cfg?.displayName ?? row.projectKey,
+      displayName: projectLabel(row.projectKey, configs),
     }
     existing.regHrs += row.regularHrs
     existing.otHrs += row.otHrs
@@ -209,7 +220,7 @@ export async function generateWorkbook(opts: WorkbookOptions): Promise<Uint8Arra
 
   // ─── Per-Project Tabs ──────────────────────────────────────────────────────
   for (const [projectKey, agg] of projectAggs.entries()) {
-    const sheetName = (agg.displayName || projectKey).slice(0, 31).replace(/[\\/*?:[\]]/g, '-')
+    const sheetName = toSheetName(agg.displayName || projectKey)
     const ws = workbook.addWorksheet(sheetName)
 
     ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }]

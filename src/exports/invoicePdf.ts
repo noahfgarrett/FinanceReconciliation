@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import type { Client, ProjectConfig, Snapshot } from '@/persistence/schemas'
 import { useSnapshotStore } from '@/store/snapshotStore'
+import { projectLabel } from '@/lib/projectLabels'
 import logoUrl from '@/assets/lotusworks-logo.png'
 
 export interface InvoiceData {
@@ -49,7 +50,7 @@ function buildLineItems(data: InvoiceData): LineItem[] {
       rows.reduce((s, r) => s + r.regularDollars + r.otDollars + r.dtDollars, 0)
 
     return {
-      project: cfg?.displayName ?? key,
+      project: projectLabel(key, data.configs),
       po: cfg?.poNumber ?? '',
       regHrs,
       otHrs,

@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import type { WeeklyBilling, ProjectConfig, Employee, RowFlag } from '@/persistence/schemas'
 import { fmtUsd, fmtHours } from '@/lib/format'
+import { projectLabel } from '@/lib/projectLabels'
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -108,7 +109,7 @@ export function makeColumns(opts: MakeColumnsOptions): ColumnDef<WeeklyBilling>[
       id: 'projectKey',
       header: 'Project',
       accessorKey: 'projectKey',
-      cell: (info) => configs[info.row.original.projectKey]?.displayName ?? info.row.original.projectKey,
+      cell: (info) => projectLabel(info.row.original.projectKey, configs),
       meta: { selectOptions: projectOptions },
       size: 180,
       minSize: 80,
