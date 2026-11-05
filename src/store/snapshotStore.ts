@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import { reconcile } from '@/reconciler/reconcile'
+import { carryOverReviewState } from '@/reconciler/reviewState'
 import type {
   Client, Employee, ExcelRow, ExportBundle, ParsedPdfWithBytes,
   ProjectConfig, Snapshot, AuditEvent,
@@ -177,7 +178,8 @@ export const useSnapshotStore = create<SnapshotState>((set, get) => ({
       projectConfigsAtSave: get().projectConfigs,
       clientsAtSave: get().clients,
       employeesAtSave: recomputeProfiles,
-      weeklyBilling: out.weeklyBilling,
+      // Keep reviewed ticks and notes on rows that still exist after the recalculation
+      weeklyBilling: carryOverReviewState(cur.weeklyBilling, out.weeklyBilling),
       warnings: out.warnings,
     }
     await putRecord('snapshots', updated.id, updated)

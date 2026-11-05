@@ -238,6 +238,67 @@ describe('snapshotStore.recompute after project edit', () => {
   })
 })
 
+describe('snapshotStore.recompute keeps review state', () => {
+  it('keeps reviewed ticks and notes when a project setting changes', async () => {
+    await useSnapshotStore.getState().upsertProjectConfig({
+      projectKey: 'project-acme',
+      displayName: 'Project Acme',
+      allocationAliases: ['ACM'],
+      otThresholdHrs: 40,
+      includeDoubleTime: false,
+      defaultRegularRate: 100,
+      employeeRateOverrides: {},
+    })
+    await useSnapshotStore.getState().importBatch({
+      employees: [{ code: '2000', firstName: 'X', lastName: 'Y' }],
+      excelRows: [{
+        employeeCode: '2000', projectNames: ['Project Acme'], allocations: ['ACM'],
+        regularHours: 80, overtimeHours: 0, doubleTimeHours: 0, dateUpdated: '2026-04-30',
+      }],
+      parsedPdfs: [{
+        employeeCode: '2000', employeeName: 'X Y',
+        payPeriodStart: '2026-04-06', payPeriodEnd: '2026-04-19',
+        entries: [
+          { date: '2026-04-06', payCode: 'REG', allocation: 'ACM', hoursTotal: 40, weekStart: '2026-04-06', confidence: 1, confidenceReasons: [] },
+          { date: '2026-04-13', payCode: 'REG', allocation: 'ACM', hoursTotal: 40, weekStart: '2026-04-13', confidence: 1, confidenceReasons: [] },
+        ],
+        weeklyTotals: { '2026-04-06': 40, '2026-04-13': 40 }, rawText: '', pageCount: 0,
+      }],
+      periodLabel: 'April 2026',
+    })
+
+    // Tick week 1 as reviewed with a note, as the spreadsheet does
+    useSnapshotStore.setState((s) => ({
+      current: s.current && {
+        ...s.current,
+        weeklyBilling: s.current.weeklyBilling.map((r) =>
+          r.weekStart === '2026-04-06' ? { ...r, reviewed: true, notes: 'checked with PM' } : r,
+        ),
+      },
+    }))
+
+    await useSnapshotStore.getState().upsertProjectConfig({
+      ...useSnapshotStore.getState().projectConfigs['project-acme'],
+      defaultRegularRate: 120,
+    })
+
+    const rows = useSnapshotStore.getState().current!.weeklyBilling
+    const week1 = rows.find((r) => r.weekStart === '2026-04-06')!
+    const week2 = rows.find((r) => r.weekStart === '2026-04-13')!
+    expect(week1.regularDollars).toBe(4800) // recalculated
+    expect(week1.reviewed).toBe(true)
+    expect(week1.notes).toBe('checked with PM')
+    expect(week2.reviewed).toBe(false)
+    expect(week2.notes).toBeUndefined()
+
+    // The persisted copy has it too
+    useSnapshotStore.setState({ current: null, snapshots: [] })
+    await useSnapshotStore.getState().hydrate()
+    const reloaded = useSnapshotStore.getState().current!.weeklyBilling
+    expect(reloaded.find((r) => r.weekStart === '2026-04-06')!.reviewed).toBe(true)
+  })
+})
+
 describe('snapshotStore.importBatch', () => {
   it('creates a draft snapshot from synthetic inputs and computes billing', async () => {
     // Pre-seed a project config with an alias for 'ACM' so the PDF allocation
