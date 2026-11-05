@@ -340,7 +340,7 @@ const EMPLOYEES: Employee[] = [
   { code: '2033', firstName: 'Nicole', lastName: 'Robinson', project: 'alpha', projectAlloc: 'ALPHA-MEP-001', regularHrs: 160, otHrs: 0, dtHrs: 0, missingFromExcel: true },
 
   // S15: Multiple conflicts — wrong alloc + hour mismatch + extra OT
-  { code: '2034', firstName: 'Gregory', lastName: 'Hall', project: 'charlie-dc', projectAlloc: 'CH-DC2-CX-001', regularHrs: 160, otHrs: 8, dtHrs: 0, wrongAllocation: 'BOGUS-XYZ-123', pdfHoursDelta: -4, extraOtInPdf: 12 },
+  { code: '2034', firstName: 'Gregory', lastName: 'Hall', project: 'charlie-dc', projectAlloc: 'CH-DC2-CX-001', regularHrs: 160, otHrs: 8, dtHrs: 0, wrongAllocation: 'UNKNOWN-PRJ-999', pdfHoursDelta: -4, extraOtInPdf: 12 },
 ]
 
 /* ------------------------------------------------------------------ */

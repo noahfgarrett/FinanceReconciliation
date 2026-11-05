@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "sample-data": "node --experimental-strip-types test-data/generate.ts"
   },
   "dependencies": {
     "@tanstack/react-table": "8.21.3",

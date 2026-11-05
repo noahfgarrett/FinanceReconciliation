@@ -8,12 +8,16 @@
  *   test/integration/visual-sweep/report.json
  *
  * `test/integration/` is gitignored so screenshots stay local.
+ *
+ * This is a manual audit tool, not a pass/fail check, so it only runs when
+ * RECON_VISUAL_SWEEP=1 is set:
+ *   RECON_VISUAL_SWEEP=1 npx playwright test visualSweep
  */
 import { test, expect, type Page } from '@playwright/test'
+import { importSampleData, openFresh } from './helpers'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-const PAGE_URL = process.env.RECON_PAGE_URL ?? 'https://noahfgarrett.github.io/FinanceReconciliation/'
 const SWEEP_DIR = path.resolve(process.cwd(), 'test/integration/visual-sweep')
 
 interface Viewport { name: string; width: number; height: number }
@@ -49,54 +53,6 @@ async function setTheme(page: Page, theme: 'dark' | 'light'): Promise<void> {
   }, theme)
   // Give Tailwind/dark vars a tick to flip
   await page.waitForTimeout(150)
-}
-
-async function clearAll(page: Page): Promise<void> {
-  await page.context().clearCookies()
-  await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' })
-  await page.evaluate(async () => {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(regs.map((r) => r.unregister()))
-    }
-    try { localStorage.clear(); sessionStorage.clear() } catch { /* ignore */ }
-    try {
-      const idb = window.indexedDB as IDBFactory & { databases?: () => Promise<{ name?: string }[]> }
-      if (idb.databases) {
-        const dbs = await idb.databases()
-        await Promise.all(dbs.map((d) => d.name ? new Promise<void>((res) => {
-          const req = indexedDB.deleteDatabase(d.name as string)
-          req.onsuccess = () => res()
-          req.onerror = () => res()
-          req.onblocked = () => res()
-        }) : null).filter(Boolean))
-      }
-    } catch { /* ignore */ }
-  })
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  // Wait for the app shell to finish hydrating (avoids capturing "Loading...")
-  // App boots with IDB hydration before showing the dropzone or page content.
-  try {
-    await page.waitForSelector('aside', { timeout: 10_000 })
-  } catch { /* ignore */ }
-  await page.waitForTimeout(1500)
-}
-
-async function loadSample(page: Page): Promise<void> {
-  // The DropZone empty state shows "Or explore with sample data"
-  const btn = page.getByRole('button', { name: /Or explore with sample data|Load Sample/i })
-  if (await btn.count() > 0) {
-    await btn.first().click()
-  } else {
-    // try via command palette as fallback
-    await page.keyboard.press('Meta+K')
-    await page.waitForTimeout(300)
-    await page.keyboard.type('sample')
-    await page.waitForTimeout(200)
-    await page.keyboard.press('Enter')
-  }
-  // Sample data populates IDB then re-renders
-  await page.waitForTimeout(2000)
 }
 
 async function clickNav(page: Page, label: string): Promise<void> {
@@ -155,6 +111,8 @@ async function captureAt(
 }
 
 test.describe('visual sweep', () => {
+  test.skip(!process.env.RECON_VISUAL_SWEEP, 'Set RECON_VISUAL_SWEEP=1 to capture screenshots')
+
   // single test that loops through everything (sequential to keep state coherent)
   test('captures all pages × theme × viewport', async ({ page, browser }) => {
     test.setTimeout(360_000)
@@ -165,44 +123,30 @@ test.describe('visual sweep', () => {
         const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } })
         const p = await ctx.newPage()
         try {
-          await clearAll(p)
+          await openFresh(p)
           await setTheme(p, theme)
 
           // 1. Billing Hours empty state
           await captureAt(p, '01-billing-empty', theme, vp)
 
-          // load sample so we can capture populated states
-          await loadSample(p)
-          await p.waitForTimeout(2500)
-
-          // The sample data triggers the Project Mapping Modal — capture it,
-          // then dismiss with "Close (ignore all)" so the rest of the sweep
-          // can proceed.
-          const mappingModal = p.locator('[data-testid="project-mapping-modal"]')
-          if (await mappingModal.count() > 0) {
-            await captureAt(p, '20-project-mapping-modal', theme, vp)
-            const closeBtn = p.getByRole('button', { name: /Close \(ignore all\)/i })
-            if (await closeBtn.count() > 0) {
-              await closeBtn.first().click()
-              await p.waitForTimeout(500)
-            }
-          }
+          // Import the generated sample data so we can capture populated states
+          await importSampleData(p)
           await captureAt(p, '02-billing-by-project', theme, vp)
 
           // tab strip — by Employee
-          const byEmp = p.getByRole('tab', { name: /By Employee/i })
+          const byEmp = p.getByRole('button', { name: 'By Employee', exact: true })
           if (await byEmp.count() > 0) {
             await byEmp.first().click(); await p.waitForTimeout(250)
             await captureAt(p, '03-billing-by-employee', theme, vp)
           }
 
-          const byWeek = p.getByRole('tab', { name: /By Week/i })
+          const byWeek = p.getByRole('button', { name: 'By Week', exact: true })
           if (await byWeek.count() > 0) {
             await byWeek.first().click(); await p.waitForTimeout(250)
             await captureAt(p, '04-billing-by-week', theme, vp)
           }
 
-          const ssTab = p.getByRole('tab', { name: /Spreadsheet/i })
+          const ssTab = p.getByRole('button', { name: 'Spreadsheet', exact: true })
           if (await ssTab.count() > 0) {
             await ssTab.first().click(); await p.waitForTimeout(250)
             await captureAt(p, '05-billing-spreadsheet', theme, vp)
