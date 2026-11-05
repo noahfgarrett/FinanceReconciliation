@@ -13,7 +13,7 @@ The billing data can be viewed by project, by employee, by week, or as one flat 
 - Reads the Excel export without a fixed template. It scans the first rows of the sheet, scores each one against known column names (employee code, legal first/last name, regular/OT/DT hours, allocation), and uses the best match as the header row.
 - Parses timesheet PDFs with pdf.js text extraction into week / allocation code / hours entries. Each entry keeps a confidence score and the page it came from, so a number can be traced back to the PDF.
 - Cross-checks the two sources and flags employees who appear in only one of them, monthly totals that differ by more than 0.1 h (shown as info instead of a warning when fewer than four weeks of PDFs are loaded), and allocation codes that don't map to a project.
-- Maps allocation codes to projects by exact alias first, then by code family (all `ABC-*` codes) when only one project claims that family.
+- Maps allocation codes to projects by exact alias first, then by code family (all `ABC-*` codes) when only one project claims that family. Hours on a code that still doesn't match are kept as $0 rows labelled "Unmapped: CODE" instead of being dropped, and the Projects tile counts them until they're mapped.
 - Splits each employee/project/week bucket into regular, OT and double time at that project's thresholds. Rates fall back from a per-project employee override, to the employee's default rate, to the project default, with OT at 1.5x and DT at 2x unless overridden.
 - Exports an invoice PDF per client (pdf-lib), an Excel workbook with a summary sheet and one tab per project (ExcelJS), CSV, and a JSON backup. Project and employee rate cards can be imported and exported as CSV.
 
@@ -46,17 +46,19 @@ There's also a hosted copy at https://noahfgarrett.github.io/FinanceReconciliati
 No real payroll data is in the repo. To get something to import:
 
 ```bash
-npx tsx test-data/generate.ts
+npm run sample-data   # needs Node 22.6+ (runs the TypeScript file directly)
 ```
 
-This writes a monthly Excel export, a folder of weekly timesheet PDFs and a client hours log to `test-data/output/` (gitignored). The projects and people in it are made up. The set includes deliberate problems: hour mismatches, employees missing from one source, wrong allocation codes, extra overtime and duplicate weeks. The screenshot above is that data after import.
+This writes a monthly Excel export, a folder of weekly timesheet PDFs and a client hours log to `test-data/output/` (gitignored). The projects and people in it are made up. The set includes deliberate problems: hour mismatches, an employee who is only in the PDFs, an allocation code that belongs to no project, extra overtime and duplicate weeks. The screenshot above is that data after import, with the unknown code showing up as the last row.
 
 ## Tests
 
 ```bash
 npm test          # Vitest: parsers, reconciliation, OT and rate logic, persistence
 npm run lint      # ESLint with --max-warnings=0
-npm run e2e       # Playwright
+npm run e2e       # Playwright (Chromium)
 ```
 
-The Playwright suite runs against the hosted copy by default. Set `RECON_BASE_URL` / `RECON_PAGE_URL` to point it at a local server. The full import test only runs when `RECON_XLSX` and `RECON_PDF_DIR` point at real files.
+`npm run e2e` generates the sample data if it's missing, builds the app, serves it with `vite preview` and imports the data through the setup wizard. It then checks the Billing Hours views and the CSV and Excel exports. Set `RECON_BASE_URL` to run it against a server that's already up. `RECON_VISUAL_SWEEP=1 npx playwright test visualSweep` captures screenshots of every page in both themes for manual review.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, unit tests, the build and the Playwright suite on pushes to main and on pull requests.
