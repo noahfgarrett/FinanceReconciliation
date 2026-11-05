@@ -10,7 +10,7 @@ export function slugifyProjectName(name: string): string {
 /**
  * Extract the "family" prefix from an allocation code.
  * Examples:
- *   BRAVO-CX-002  → "bravo"
+ *   BRAVO-CX-002     → "bravo"
  *   ALPHA-MEP-001    → "alpha"
  *   CH-DC2-CX-001    → "ch-dc2"  (first segment < 3 chars → include next)
  *   ADMIN-OFC-001    → "admin"
@@ -29,7 +29,7 @@ export function allocFamily(code: string): string {
  * fallback → null.
  *
  * The prefix-family fallback groups allocation codes by their leading
- * segment (e.g. all ABC-* codes share family "bravo"). If a
+ * segment (e.g. all BRAVO-* codes share family "bravo"). If a
  * code isn't an exact alias but its family matches exactly one project's
  * aliases, that project is returned.
  */

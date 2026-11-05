@@ -129,7 +129,7 @@ Table: Employee Code, Name, Default Bill Rate, Job Title, # Project Overrides, L
 **Projects:**
 ```
 projectName, defaultBillRate, otThresholdHrs, dtEnabled, dtThresholdHrs, allocationCodes
-"ALPHA MEP", 85.00, 40, false, , "ALPHA-MEP-001;ALPHA-MEP-002"
+"ALPHA MEP", 100.00, 40, false, , "ALPHA-MEP-001;ALPHA-MEP-002"
 ```
 
 **Employees:**

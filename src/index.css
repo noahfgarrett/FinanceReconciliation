@@ -76,7 +76,7 @@
   --brand-blue-950: #031D38;
   --brand-blue:     #0057A4;
 
-  /* ── Surfaces (dark) — warm charcoal at Claude-desktop lightness ── */
+  /* ── Surfaces (dark) — warm charcoal ── */
   --surface-base:               #1B1E25;        /* page background — rgb(27,30,37) */
   --surface-elevated:           #23272F;        /* cards, sidenav    — rgb(35,39,47) */
   --surface-overlay:            #2C313B;        /* modals, drawers   — rgb(44,49,59) */

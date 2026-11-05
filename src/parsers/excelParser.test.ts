@@ -57,8 +57,8 @@ describe('parseExcel', () => {
       SPEC_HEADERS,
       specRow(
         '2000', 'Jordan', 'Avery', 160, 12, 0, '2026-05-02', 'W002000',
-        'ADMIN-OFC-001; BRAVO-CX-002; ALPHA-MEP-001; ALPHA-UTL-003; TRAIN-SAF-001',
-        'Project Alpha — Data Center 1; Internal Admin — Non-Billable; Internal Training — Non-Billable; Project Bravo — Office Campus',
+        'ADMIN-OFC-001; ALPHA-MEP-001; ALPHA-UTL-003; BRAVO-CX-002; TRAIN-SAF-001',
+        'Internal Admin — Non-Billable; Internal Training — Non-Billable; Project Alpha — Data Center 1; Project Bravo — Office Campus',
       ),
     ]
     const result = parseExcel(makeWorkbook(data))
@@ -67,15 +67,15 @@ describe('parseExcel', () => {
     const row = result.rows[0]
     expect(row.allocations).toEqual([
       'ADMIN-OFC-001',
-      'BRAVO-CX-002',
       'ALPHA-MEP-001',
       'ALPHA-UTL-003',
+      'BRAVO-CX-002',
       'TRAIN-SAF-001',
     ])
     expect(row.projectNames).toEqual([
-      'Project Alpha — Data Center 1',
       'Internal Admin — Non-Billable',
       'Internal Training — Non-Billable',
+      'Project Alpha — Data Center 1',
       'Project Bravo — Office Campus',
     ])
     expect(row.regularHours).toBe(160)

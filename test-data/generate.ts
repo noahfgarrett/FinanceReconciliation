@@ -51,17 +51,17 @@ const PROJECTS: Record<string, { display: string; allocs: string[]; rate: number
   'alpha': {
     display: 'Project Alpha — Data Center 1',
     allocs: ['ALPHA-MEP-001', 'ALPHA-UTL-003', 'ALPHA-ELC-002'],
-    rate: 85,
+    rate: 100,
   },
   'bravo': {
     display: 'Project Bravo — Office Campus',
     allocs: ['BRAVO-CX-002', 'BRAVO-STR-001', 'BRAVO-MEP-003'],
-    rate: 95,
+    rate: 115,
   },
   'charlie-dc': {
     display: 'Charlie Data Center 2',
     allocs: ['CH-DC2-CX-001', 'CH-DC2-MEP-002'],
-    rate: 90,
+    rate: 105,
   },
 }
 
