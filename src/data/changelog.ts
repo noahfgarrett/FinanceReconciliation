@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.4',
+    date: '2026-11-06T00:00:00Z',
+    type: 'fix',
+    notes: `### Clearer billing views and invoices
+- Unmapped allocation codes are labeled "Unmapped: CODE" everywhere, with a warning style in By Project, instead of showing an internal key.
+- Header and tile counts now agree, unmapped codes no longer count as configured projects, and counts use the right singular or plural.
+- Reviewed ticks and notes are kept when a project setting change recalculates billing.
+- Invoice lines are priced at each employee's effective rate, so every line's rate times hours matches its amount.`,
+  },
+  {
     version: '1.5.3',
     date: '2026-05-15T00:00:00Z',
     type: 'fix',
